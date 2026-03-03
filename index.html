@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title data-i18n="app.title">Allenamenti</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- PWA -->
@@ -43,10 +40,7 @@
         <div class="brand" data-i18n="app.brand">Allenamenti</div>
         <div id="whoami" class="whoami"></div>
       </div>
-      <div class="user-mini">
-          <div id="miniAvatar" class="mini-avatar" aria-label="Foto profilo"></div>
-        </div>
-        <button id="logoutBtn" class="btn-secondary" data-i18n="auth.logoutBtn">Logout</button>
+      <button id="logoutBtn" class="btn-secondary" data-i18n="auth.logoutBtn">Logout</button>
     </header>
 
     <!-- Admin filter -->
@@ -146,71 +140,6 @@
           <button id="exportPdfBtn" class="btn-secondary" data-i18n="export.pdf">📄 Esporta PDF</button>
         </div>
       </section>
-    
-      <!-- Profile -->
-      <section id="view-profile" class="view" style="display:none">
-        <h2 class="view-title">Profilo</h2>
-
-        <div class="profile-head card">
-          <div id="profileAvatar" class="profile-avatar no-photo" aria-label="Foto profilo">👤</div>
-          <div class="profile-meta">
-            <div id="profileName" class="profile-name">—</div>
-            <div id="profileEmail" class="profile-sub">—</div>
-            <div class="profile-badges">
-              <span id="profileRole" class="badge badge-role">—</span>
-            </div>
-          </div>
-          <div class="profile-head-actions">
-            <button type="button" id="changeAvatarBtn" class="btn-secondary small-btn">Cambia foto</button>
-            <input type="file" id="avatarInput" accept="image/*" style="display:none" />
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Preferenze</div>
-
-          <div class="pref-row">
-            <div class="pref-label">Colore calendario</div>
-            <div id="colorPalette" class="color-palette" role="list" aria-label="Colori calendario"></div>
-          </div>
-
-          <p class="muted small" style="margin:10px 0 0">
-            Preferenze salvate sul dispositivo. Foto salvata online (Supabase) e visibile su tutti i dispositivi.
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Le mie statistiche</div>
-          <div class="stats-grid">
-            <div class="stat">
-              <div class="stat-k">Sessioni mese</div>
-              <div id="pStatSessions" class="stat-v">—</div>
-            </div>
-            <div class="stat">
-              <div class="stat-k">Ore totali</div>
-              <div id="pStatHours" class="stat-v">—</div>
-            </div>
-            <div class="stat">
-              <div class="stat-k">Partecipanti medi</div>
-              <div id="pStatAvg" class="stat-v">—</div>
-            </div>
-          </div>
-        </div>
-
-        <div id="adminPanel" class="card" style="display:none">
-          <div class="card-title">Admin</div>
-          <div class="admin-actions">
-            <button type="button" class="btn-secondary" disabled>Gestione utenti (coming soon)</button>
-            <button type="button" class="btn-secondary" disabled>Tipi allenamento (coming soon)</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-title">Account</div>
-          <button type="button" id="logoutBtn2" class="btn-danger">Logout</button>
-        </div>
-      </section>
-
     </main>
 <div id="exportOptions" style="display: none; margin-top: 12px;">
   <h4 data-i18n="export.title">Esporta:</h4>
@@ -237,15 +166,14 @@
       <button class="nav-item" data-target="view-dashboard">🏠<span>Dashboard</span></button>
       <button class="nav-item" data-target="view-calendar">📅<span>Calendario</span></button>
       <button class="nav-item" data-target="view-list">📋<span>Lista</span></button>
-      <button class="nav-item" data-target="view-profile">👤<span>Profilo</span></button>
     </nav>
   </div>
 
-  <script src="app.js?v=20260301"></script>
+  <script src="app.js"></script>
 
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=20260301');
+      navigator.serviceWorker.register('./sw.js');
     }
   </script>
 </body>
