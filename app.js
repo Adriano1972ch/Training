@@ -402,11 +402,15 @@ async function enrichWithProfiles(rows) {
   if (ids.length === 0) return rows || [];
   const { data: profs, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .in("id", ids);
   if (error) { console.error("Errore lettura profiles:", error); return rows || []; }
-  const map = new Map((profs || []).map(p => [p.id, p.full_name]));
-  return (rows || []).map(r => ({ ...r, _full_name: map.get(r.user_id) || null }));
+  const map = new Map((profs || []).map(p => [p.id, p]));
+  return (rows || []).map(r => ({
+    ...r,
+    _full_name: map.get(r.user_id)?.full_name || null,
+    _avatar_url: map.get(r.user_id)?.avatar_url || null
+  }));
 }
 
 function clearEditingMode() {
@@ -459,7 +463,7 @@ async function populateUserFilter() {
   if (!userFilterSelect) return;
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .order("full_name", { ascending: true });
 
   if (error) {
@@ -698,7 +702,18 @@ async function caricaAllenamenti(data) {
         <div>🤝 <strong>Trainer:</strong> ${a.persone || "-"}</div>
         <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
         <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
-        ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
+        ${isAdmin ? `
+      <div class="inserted-by">
+        ${
+          a._avatar_url
+            ? `<img class="inserted-avatar-img" src="${a._avatar_url}" alt="">`
+            : `<div class="inserted-avatar-placeholder">👤</div>`
+        }
+        <div>
+          <strong>Inserito da:</strong> ${who}
+        </div>
+      </div>
+    ` : ""}
         <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
 
         ${canEdit ? `
