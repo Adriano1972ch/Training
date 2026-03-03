@@ -16,6 +16,7 @@ const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
 
 const form = document.getElementById("form");
+const submitBtn = form?.querySelector('button[type="submit"]');
 const tipo = document.getElementById("tipo");
 const dataInput = document.getElementById("data");
 const ora_inizio = document.getElementById("ora_inizio");
@@ -42,9 +43,287 @@ const exportRangeRadios = Array.from(document.querySelectorAll('input[name="expo
 
 let lastExportIntent = null; // "excel" | "pdf"
 
+
 // Views & nav
-const viewIds = ["view-dashboard", "view-calendar", "view-list"];
+const viewIds = ["view-dashboard", "view-calendar", "view-list", "view-profile"];
 const navButtons = Array.from(document.querySelectorAll(".nav-item"));
+
+
+// ================= PROFILE UI (colors + avatar) =================
+const PROFILE_COLORS = ["#1d4ed8", "#2563eb", "#0ea5e9", "#06b6d4", "#14b8a6", "#16a34a", "#22c55e", "#84cc16", "#f59e0b", "#f97316", "#ef4444", "#e11d48", "#db2777", "#a855f7", "#7c3aed", "#6366f1", "#334155", "#475569", "#0f172a", "#9ca3af"];
+
+// init colori trainer (prima del login)
+
+const LAST_TRAINER_KEY = "last_trainer_slug";
+
+// ================= TRAINER COLORS (Option 1) =================
+
+const DEFAULT_SOPHIE = "#2563eb";
+const DEFAULT_VIVIENNE = "#16a34a";
+// Ogni utente imposta SOLO il proprio colore (Sophie o Vivienne).
+// I colori sono salvati sul dispositivo (localStorage).
+
+
+function getTrainerSlug(){
+  // 1) se siamo loggati, deduciamo dal nome/email
+  const s = String(currentUser?.user_metadata?.full_name || currentUser?.email || "").toLowerCase();
+  if (s.includes("vivienne")) { localStorage.setItem(LAST_TRAINER_KEY, "vivienne"); return "vivienne"; }
+  if (s.includes("sophie")) { localStorage.setItem(LAST_TRAINER_KEY, "sophie"); return "sophie"; }
+
+  // 2) se non siamo loggati, manteniamo l'ultimo trainer usato
+  const last = localStorage.getItem(LAST_TRAINER_KEY);
+  if (last === "vivienne" || last === "sophie") return last;
+
+  // 3) fallback
+  return "sophie";
+}
+
+function initTrainerColors(){
+  const sophie = localStorage.getItem("sophie_color") || DEFAULT_SOPHIE;
+  const vivi = localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE;
+
+  document.documentElement.style.setProperty("--sophieColor", sophie);
+  document.documentElement.style.setProperty("--vivienneColor", vivi);
+
+  // accent = colore dell'utente loggato (se già loggato), altrimenti Sophie
+  const slug = getTrainerSlug();
+  const myColor = (slug === "vivienne") ? vivi : sophie;
+  document.documentElement.style.setProperty("--accent", myColor);
+}
+
+function setMyTrainerColor(col, opts = {}){
+  const slug = getTrainerSlug();
+  if (slug === "vivienne") {
+    localStorage.setItem("vivienne_color", col);
+    document.documentElement.style.setProperty("--vivienneColor", col);
+  } else {
+    localStorage.setItem("sophie_color", col);
+    document.documentElement.style.setProperty("--sophieColor", col);
+  }
+  document.documentElement.style.setProperty("--accent", col);
+
+  // Sync su Supabase (se loggati) salvo diversa indicazione
+  if (opts.persistRemote !== false && currentUser){
+    Promise.resolve(saveTrainerColor(col)).catch((e)=>console.warn("trainer_color update error", e));
+  }
+}
+
+function mountColorPalette(){
+  const wrap = document.getElementById("colorPalette");
+  if (!wrap) return;
+
+  const slug = getTrainerSlug();
+  const saved = (slug === "vivienne")
+    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
+    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE);
+
+  wrap.innerHTML = "";
+  PROFILE_COLORS.forEach((col) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dotpick";
+    btn.dataset.color = col;
+    btn.style.setProperty("--c", col);
+    btn.setAttribute("aria-label", "Colore " + col);
+    if (col === saved) btn.classList.add("active");
+
+    btn.onclick = () => {
+      setMyTrainerColor(col);
+      wrap.querySelectorAll(".dotpick").forEach(b => b.classList.toggle("active", b.dataset.color === col));
+      // ricalcola gradiente "both" (solo CSS vars, quindi basta)
+    };
+
+    wrap.appendChild(btn);
+  });
+}
+
+async function ensureProfileRow(){
+  if (!currentUser) return;
+  const { data: existing, error } = await supabaseClient
+    .from("profiles")
+    .select("id")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+  if (error) { console.warn("profiles read error", error); return; }
+  if (!existing) {
+    const payload = {
+      id: currentUser.id,
+      full_name: currentUser.user_metadata?.full_name || null,
+      avatar_url: null
+    };
+    const { error: insErr } = await supabaseClient.from("profiles").insert(payload);
+    if (insErr) console.warn("profiles insert error", insErr);
+  }
+}
+
+async function fetchAvatarUrl(){
+  if (!currentUser) return null;
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("avatar_url")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+  if (error) { console.warn("avatar_url read error", error); return null; }
+  return data?.avatar_url || null;
+}
+
+async function saveAvatarUrl(url){
+  if (!currentUser) return;
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ avatar_url: url })
+    .eq("id", currentUser.id);
+  if (error) console.warn("avatar_url update error", error);
+}
+
+
+async function fetchTrainerColor(){
+  if (!currentUser) return null;
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("trainer_color")
+    .eq("id", currentUser.id)
+    .maybeSingle();
+  if (error) { console.warn("trainer_color read error", error); return null; }
+  return data?.trainer_color || null;
+}
+
+async function saveTrainerColor(col){
+  if (!currentUser) return;
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ trainer_color: col })
+    .eq("id", currentUser.id);
+  if (error) console.warn("trainer_color update error", error);
+}
+
+async function syncTrainerColorFromProfile(){
+  if (!currentUser) return;
+
+  const slug = getTrainerSlug();
+  const local = (slug === "vivienne")
+    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
+    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE);
+
+  const remote = await fetchTrainerColor();
+
+  if (remote) {
+    // Applica il colore remoto senza riscriverlo subito (evita update inutile)
+    setMyTrainerColor(remote, { persistRemote: false });
+  } else if (local) {
+    // Prima volta: carica su Supabase il valore locale
+    await saveTrainerColor(local);
+  }
+}
+
+async function uploadAvatarToStorage(file){
+  const bucket = "avatars";
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `${currentUser.id}/avatar.${ext}`;
+  const { error } = await supabaseClient.storage.from(bucket).upload(path, file, {
+    upsert: true,
+    cacheControl: "3600"
+  });
+  if (error) throw error;
+  const { data } = supabaseClient.storage.from(bucket).getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+
+
+function updateMiniAvatar(url){
+  const el = document.getElementById("miniAvatar");
+  if (!el) return;
+
+  if (url){
+    el.textContent = "";
+    el.style.backgroundImage = "url('" + withCacheBust(url) + "')";
+    el.classList.add("has-photo");
+  } else {
+    el.style.backgroundImage = "none";
+    el.classList.remove("has-photo");
+    el.textContent = "👤";
+  }
+}
+
+function withCacheBust(url){
+  if (!url) return url;
+  const ts = localStorage.getItem(avatarKey("ts")) || String(Date.now());
+  const sep = url.includes("?") ? "&" : "?";
+  return url + sep + "v=" + encodeURIComponent(ts);
+}
+
+function avatarKey(suffix){
+  const uid = currentUser?.id || "anon";
+  return `profile_avatar_${uid}_${suffix}`;
+}
+
+
+async function loadAvatarIntoUI(){
+  const el = document.getElementById("profileAvatar");
+  if (!el) return;
+  let url = await fetchAvatarUrl();
+  if (!url) url = localStorage.getItem(avatarKey("data")) || null; // fallback
+  if (url) {
+    el.textContent = "";
+    el.style.backgroundImage = "url('" + url + "')";
+    el.classList.add("has-photo");
+    el.classList.remove("no-photo");
+  
+    updateMiniAvatar(url);
+} else {
+    el.style.backgroundImage = "none";
+    el.classList.remove("has-photo");
+    el.classList.add("no-photo");
+    el.textContent = "👤";
+  }
+}
+
+function bindAvatarUpload(){
+  const btn = document.getElementById("changeAvatarBtn");
+  const input = document.getElementById("avatarInput");
+  const avatar = document.getElementById("profileAvatar");
+  if (!btn || !input || !avatar) return;
+
+  const open = () => input.click();
+  btn.onclick = open;
+  avatar.onclick = open;
+
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { alert("Seleziona un file immagine."); return; }
+    if (file.size > 1500000) { alert("Immagine troppo grande (max ~1.5MB)."); return; }
+
+    // local preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || "");
+      localStorage.setItem(avatarKey("data"), dataUrl);
+      avatar.textContent = "";
+      avatar.style.backgroundImage = "url('" + dataUrl + "')";
+      avatar.classList.add("has-photo");
+      avatar.classList.remove("no-photo");
+    };
+    reader.readAsDataURL(file);
+
+    // upload online (cross-device)
+    try {
+      const publicUrl = await uploadAvatarToStorage(file);
+      if (publicUrl) {
+        await ensureProfileRow();
+        await saveAvatarUrl(publicUrl);
+      
+        localStorage.setItem(avatarKey("ts"), String(Date.now()));
+}
+    } catch (e) {
+      console.warn("Avatar upload error:", e);
+      alert("Upload avatar fallito. Verifica bucket \"avatars\" e policy Storage (403/404). Dettagli in console.");
+    } finally {
+      input.value = "";
+    }
+  };
+}
 const dashGoCalendarBtn = document.getElementById("dashGoCalendarBtn");
 const dashGoListBtn = document.getElementById("dashGoListBtn");
 
@@ -68,6 +347,8 @@ let allenamentiMese = [];
 let giornoSelezionato = null;
 
 let currentUser = null;
+
+    initTrainerColors();
 let isAdmin = false;
 
 let selectedUserId = "__all__"; // "__all__" = no filter
@@ -76,7 +357,12 @@ let selectedUserId = "__all__"; // "__all__" = no filter
 let editingId = null;
 
 // ================= UTILS =================
-function isoDate(d) { return d.toISOString().split("T")[0]; }
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
 function formatDate(dateStr) {
   const [y, m, d] = dateStr.split("-");
   return `${d}.${m}.${y}`;
@@ -96,6 +382,7 @@ function showView(id) {
     el.style.display = (v === id) ? "block" : "none";
   });
   navButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.target === id));
+  if (id === "view-profile") { renderProfile(); }
   if (id === "view-list" && giornoSelezionato) caricaAllenamenti(giornoSelezionato);
 }
 
@@ -124,6 +411,7 @@ async function enrichWithProfiles(rows) {
 
 function clearEditingMode() {
   editingId = null;
+  if (submitBtn) submitBtn.textContent = "➕ Aggiungi";
 }
 
 // ================= AUTH UI =================
@@ -149,7 +437,9 @@ document.getElementById("registerBtn").onclick = async () => {
 
 document.getElementById("logoutBtn").onclick = async () => {
   await supabaseClient.auth.signOut();
-  currentUser = null; isAdmin = false; selectedUserId = "__all__";
+  currentUser = null; 
+    initTrainerColors();
+isAdmin = false; selectedUserId = "__all__";
   allenamentiMese = []; giornoSelezionato = null;
   clearEditingMode();
   listaDiv.innerHTML = ""; listaTitle.textContent = tr("list.workouts");
@@ -202,7 +492,17 @@ async function checkSession() {
   if (!session) { authDiv.style.display = "block"; appDiv.style.display = "none"; return; }
 
   currentUser = session.user;
-  isAdmin = await getIsAdmin();
+
+  try{ await ensureProfileRow(); }catch(e){ console.warn(e); }
+
+
+      
+  // aggiorna colori in base all\'utente loggato
+  initTrainerColors();
+  try{ await syncTrainerColorFromProfile(); }catch(e){ console.warn(e); }
+  try{ mountColorPalette(); }catch(e){ console.warn(e); }
+try{ await loadAvatarIntoUI(); }catch(e){ console.warn(e); }
+isAdmin = await getIsAdmin();
 
   authDiv.style.display = "none";
   appDiv.style.display = "block";
@@ -216,7 +516,7 @@ async function checkSession() {
   }
 
   await caricaAllenamentiMese();
-  showView("view-dashboard");
+  showView("view-list");
 }
 checkSession();
 
@@ -237,8 +537,14 @@ form.onsubmit = async (e) => {
     return;
   }
 
+  // Se sei admin e vuoi inserire per altri, devi scegliere un utente specifico
+  if (isAdmin && selectedUserId === "__all__") {
+    alert("Se sei admin, seleziona prima un utente specifico (non 'Tutti') dal menu Visualizza.");
+    return;
+  }
+
   const payload = {
-    user_id: session.user.id, // ✅ fondamentale per FK
+    user_id: (isAdmin && selectedUserId && selectedUserId !== "__all__") ? selectedUserId : session.user.id,
     tipo: tipo.value,
     data: dataInput.value,
     ora_inizio: ora_inizio.value,
@@ -325,9 +631,9 @@ function renderCalendar() {
     const dayRows = allenamentiMese.filter(a => a.data === dateStr);
     const hasWorkout = dayRows.length > 0;
 
-    // Color coding by people (persone + note) robusto
+    // Color coding: usa prima il nome profilo (_full_name = "Inserito da"), con fallback su persone/note
     const namesText = dayRows
-      .map(r => `${r.persone || ""} ${r.note || ""}`)
+      .map(r => `${r._full_name || ""} ${r.persone || ""} ${r.note || ""}`)
       .join(" ")
       .toLowerCase()
       .normalize("NFD")
@@ -450,10 +756,11 @@ window.modificaAllenamento = async function (id) {
   note.value = data.note || "";
 
   // porta l'utente dove vede il form (di solito dashboard)
-  showView("view-dashboard");
+  showView("view-list");
   form.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
-  alert("Modalità modifica: ora premi SALVA per aggiornare ✅");
+  if (submitBtn) submitBtn.textContent = "💾 Salva";
+  alert("Modalità modifica: ora modifica i campi e poi premi SALVA ✅");
 };
 
 // ================= DASHBOARD =================
@@ -650,7 +957,12 @@ async function doExportPdf() {
     if (!rows || rows.length === 0) return alert("Nessun dato da esportare");
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+    const doc = new jsPDF({
+  orientation: "landscape",
+  unit: "pt",
+  format: "a4"
+});
 
     const title = giornoSelezionato
       ? `Report Allenamenti (${fromDate})`
@@ -999,3 +1311,40 @@ window.alert = (msg) => {
 };
 
 document.addEventListener("DOMContentLoaded", applyTranslations);
+
+
+
+async function renderProfile(){
+  // Fill basic user info
+  const nameEl = document.getElementById("profileName");
+  const emailEl = document.getElementById("profileEmail");
+  const roleEl = document.getElementById("profileRole");
+  if (nameEl) nameEl.textContent = currentUser?.user_metadata?.full_name || currentUser?.email || "Utente";
+  if (emailEl) emailEl.textContent = currentUser?.email || "—";
+
+  try {
+    const isAdmin = await getIsAdmin();
+    if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
+    const adminPanel = document.getElementById("adminPanel");
+    if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
+  } catch(_) {
+    if (roleEl) roleEl.textContent = "Utente";
+  }
+
+  // Stats: mirror dashboard
+  const ps = document.getElementById("pStatSessions");
+  const ph = document.getElementById("pStatHours");
+  const pa = document.getElementById("pStatAvg");
+  if (ps) ps.textContent = document.getElementById("dashSessions")?.textContent || "—";
+  if (ph) ph.textContent = document.getElementById("dashHours")?.textContent || "—";
+  if (pa) pa.textContent = document.getElementById("dashAvgParticipants")?.textContent || "—";
+
+  mountColorPalette();
+  bindAvatarUpload();
+  await ensureProfileRow();
+  await loadAvatarIntoUI();
+
+  // secondary logout
+  const lb2 = document.getElementById("logoutBtn2");
+  if (lb2) lb2.onclick = () => document.getElementById("logoutBtn")?.click();
+}
