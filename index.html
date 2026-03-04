@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Allenamenti</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-512.png">
+  <meta name="theme-color" content="#2563eb">
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ================= AUTH ================= -->
+  <div id="auth">
+    <h2>Login / Registrazione</h2>
+
+    <input id="full_name" type="text" placeholder="Nome completo">
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Registrati</button>
+  </div>
+
+  <!-- ================= APP ================= -->
+  <div id="app" style="display:none">
+
+    <button id="logoutBtn">Logout</button>
+
+    <!-- Filtro Admin (mostrato solo se admin da app.js) -->
+    <div id="userFilterWrap" class="admin-filter" style="display:none">
+      <label for="userFilter"><strong>Visualizza:</strong></label>
+      <select id="userFilter">
+        <option value="__all__">Tutti</option>
+      </select>
+    </div>
+
+    <!-- FORM -->
+    <h2>Nuovo allenamento</h2>
+    <form id="form">
+      <input id="tipo" placeholder="Tipo allenamento" required>
+
+      <div class="field">
+        <label for="data">Data</label>
+        <input id="data" type="date" required>
+      </div>
+
+      <div class="field">
+        <label for="ora_inizio">Ora</label>
+        <input id="ora_inizio" type="time" required>
+      </div>
+
+      <input id="durata" type="number" placeholder="Durata (min)">
+      <input id="numero_partecipanti" type="number" placeholder="Partecipanti">
+      <input id="persone" placeholder="Con chi">
+      <textarea id="note" placeholder="Note"></textarea>
+
+      <button type="submit">➕ Aggiungi</button>
+    </form>
+
+    <!-- CALENDARIO -->
+    <h2>Calendario</h2>
+    <div id="calendar">
+      <div class="calendar-header">
+        <button id="prevMonth">‹</button>
+        <span id="calendarTitle"></span>
+        <button id="nextMonth">›</button>
+      </div>
+
+      <div class="calendar-weekdays">
+        <div>L</div><div>M</div><div>M</div><div>G</div><div>V</div><div>S</div><div>D</div>
+      </div>
+
+      <div id="calendar-grid"></div>
+    </div>
+
+    <!-- LISTA -->
+    <h2 id="lista-title">Allenamenti</h2>
+    <div id="lista"></div>
+
+    <button id="exportExcelBtn">📊 Esporta in Excel</button>
+
+  </div>
+
+  <!-- App -->
+  <script src="app.js"></script>
+
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+    }
+  </script>
+
+  <!-- Libreria Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+</body>
+</html>
