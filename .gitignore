@@ -1,0 +1,6 @@
+# Non committare configurazioni con chiavi
+config.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
