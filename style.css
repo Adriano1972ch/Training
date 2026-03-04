@@ -498,41 +498,14 @@ h3{ margin: 14px 0 10px; }
 .mini-avatar.has-photo{ background-color: transparent; }
 
 
-/* ===== ADMIN AVATAR IMG (definitivo) ===== */
-
-.inserted-by{
-  display:flex;
-  align-items:center;
-  gap:12px;
+/* ===== AVATAR UTENTE SELEZIONATO (ADMIN) ===== */
+.selected-user-avatar{
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  border:1px solid var(--border);
   margin-top:6px;
-}
-
-.inserted-avatar-img{
-  width:48px;
-  height:48px;
-  border-radius:999px;
-  object-fit:cover;
-  border:1px solid var(--border);
-  flex-shrink:0;
-}
-
-.inserted-avatar-placeholder{
-  width:48px;
-  height:48px;
-  border-radius:999px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background: rgba(37,99,235,0.12);
-  border:1px solid var(--border);
-  font-size:20px;
-  flex-shrink:0;
-}
-
-@media (max-width:520px){
-  .inserted-avatar-img,
-  .inserted-avatar-placeholder{
-    width:40px;
-    height:40px;
-  }
 }
