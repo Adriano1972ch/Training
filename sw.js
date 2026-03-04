@@ -1,5 +1,4 @@
-const CACHE_NAME = "training-app-v2";
-const FILES_TO_CACHE = [
+
   "./",
   "./index.html",
   "./style.css",
