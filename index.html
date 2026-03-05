@@ -50,13 +50,15 @@
         <h2 class="view-title">Dashboard</h2>
 
         <div class="card">
-          <label for="dashPeriod"><strong>Periodo</strong></label>
-          <select id="dashPeriod">
+          <label for="dashPeriodSelect"><strong>Periodo</strong></label>
+          <select id="dashPeriodSelect">
             <option value="thisMonth">Questo mese</option>
             <option value="lastMonth">Mese scorso</option>
             <option value="thisYear">Quest'anno</option>
             <option value="all">Tutto</option>
           </select>
+
+          <div id="dashPeriod" class="muted" style="margin-top:6px;"></div>
 
           <div class="stats-grid">
             <div class="stat-card">
@@ -77,6 +79,11 @@
             <button id="dashGoCalendarBtn">Vai al Calendario</button>
             <button id="dashGoListBtn" class="btn-secondary">Vai alla Lista</button>
           </div>
+        </div>
+
+        <div class="card">
+          <h3>Atleti</h3>
+          <div id="dashAthletes" class="athlete-grid"></div>
         </div>
 
         <div class="card">
@@ -129,14 +136,6 @@
             </div>
 
             <button id="applyExport" style="margin-top:10px;">Applica</button>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Allenamenti per atleta</h3>
-          <p class="muted">Lista raggruppata per atleta (con foto).</p>
-          <div id="dashAthletesList">
-            <p class="muted">Nessun dato.</p>
           </div>
         </div>
       </section>
@@ -193,11 +192,6 @@
       <!-- LIST -->
       <section id="view-list" style="display:none;">
         <h2 id="lista-title" class="view-title">Lista</h2>
-
-        <div id="userFilterWrap" class="card" style="display:none; align-items:center; gap:10px;">
-          <label for="userFilter" style="margin:0;"><strong>Filtro atleta</strong></label>
-          <select id="userFilter" style="flex:1;"></select>
-        </div>
         <div id="lista" class="card">
           <p class="muted">Seleziona un giorno dal calendario per vedere la lista.</p>
         </div>
@@ -237,26 +231,7 @@
 
         <div id="adminPanel" class="card" style="display:none;">
           <h3>Admin</h3>
-
-          <h4 style="margin-top:10px;">Gestione utenti</h4>
-          <div class="muted" style="margin-bottom:10px;">
-            Aggiungi o rimuovi atleti dalla tua lista (serve per poterli selezionare in “Visualizza”).
-          </div>
-
-          <div class="card" style="padding:12px; border-radius:12px; margin:0; border:1px dashed var(--border);">
-            <label><strong>Aggiungi atleta</strong></label>
-            <input id="addAthleteName" type="text" placeholder="Nome atleta" />
-            <input id="addAthleteAvatar" type="url" placeholder="URL foto (opzionale)" />
-            <button id="addAthleteBtn" type="button">Aggiungi</button>
-            <div class="muted" style="margin-top:8px;">Suggerimento: puoi incollare un URL immagine (https://...).</div>
-          </div>
-
-          <div style="height:12px;"></div>
-
-          <label><strong>Atleti</strong></label>
-          <div id="athletesAdminList">
-            <p class="muted">Caricamento...</p>
-          </div>
+          <p class="muted">Pannello admin (visibile solo se autorizzato).</p>
         </div>
       </section>
 
