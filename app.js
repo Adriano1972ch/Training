@@ -461,6 +461,7 @@ dashGoListBtn?.addEventListener("click", () => showView("view-list"));
 // ================= DATA LOAD =================
 async function populateUserFilter(selectEl) {
   const el = selectEl || userFilterSelect || dashUserSelect;
+  if (!el) return; // page may not have the filter UI
   if (!el) return;
 
   const { data, error } = await supabaseClient
