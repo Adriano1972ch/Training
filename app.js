@@ -481,8 +481,7 @@ async function populateUserFilter(selectEl) {
   // comodo: opzione rapida per te (admin)
   if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Io</option>`);
   (data || []).forEach(p => opts.push(`<option value="${p.id}">${p.full_name || "(senza nome)"}</option>`));
-  el.innerHTML = opts.join("
-");
+  el.innerHTML = opts.join("\n");
 
   // default: tutti
   el.value = selectedUserId || "__all__";
