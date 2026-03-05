@@ -327,6 +327,9 @@ function bindAvatarUpload(){
 const dashGoCalendarBtn = document.getElementById("dashGoCalendarBtn");
 const dashGoListBtn = document.getElementById("dashGoListBtn");
 
+// Dashboard list (raggruppata per atleta)
+const dashAthletesList = document.getElementById("dashAthletesList");
+
 // Dashboard fields
 const dashSessions = document.getElementById("dashSessions");
 const dashHours = document.getElementById("dashHours");
@@ -397,16 +400,80 @@ async function getIsAdmin() {
   return data?.role === "admin";
 }
 
+
+async function fetchAthletes(){
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id, full_name, avatar_url")
+    .order("full_name", { ascending: true });
+  if (error) { console.error("Errore lettura atleti:", error); return []; }
+  return data || [];
+}
+
+async function addAthlete(fullName, avatarUrl){
+  if (!fullName) { alert("Inserisci un nome."); return; }
+  const id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now());
+  const payload = { id, full_name: fullName, avatar_url: avatarUrl || null };
+  const { error } = await supabaseClient.from("profiles").insert(payload);
+  if (error) { console.error(error); alert("Errore aggiunta atleta."); return; }
+}
+
+async function deleteAthlete(athleteId, athleteName){
+  if (!athleteId) return;
+  const ok = confirm(`Vuoi eliminare l'atleta "${athleteName || ""}"?\n\nVerranno eliminati anche i suoi allenamenti.`);
+  if (!ok) return;
+
+  // elimina allenamenti
+  const { error: delWorkErr } = await supabaseClient.from("allenamenti").delete().eq("user_id", athleteId);
+  if (delWorkErr) { console.error(delWorkErr); alert("Errore eliminazione allenamenti."); return; }
+
+  // elimina profilo
+  const { error: delProfErr } = await supabaseClient.from("profiles").delete().eq("id", athleteId);
+  if (delProfErr) { console.error(delProfErr); alert("Errore eliminazione atleta."); return; }
+}
+
+async function renderAthletesAdminList(){
+  const host = document.getElementById("athletesAdminList");
+  if (!host) return;
+  const athletes = await fetchAthletes();
+  if (!athletes.length) { host.innerHTML = `<p class="muted">Nessun atleta.</p>`; return; }
+
+  host.innerHTML = athletes.map(a => {
+    const avatar = a.avatar_url || "";
+    return `
+      <div class="athlete-group">
+        <div class="athlete-head">
+          <img class="athlete-avatar" src="${avatar}" alt="" onerror="this.style.display='none'"/>
+          <div class="athlete-name">${escapeHtml(a.full_name || "-")}</div>
+          <div class="athlete-actions">
+            <button type="button" class="btn-danger" onclick="window.__delAthlete('${a.id}', '${escapeHtml(a.full_name || "-").replace(/'/g,"\\'")}')">Elimina</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+window.__delAthlete = async (id, name) => {
+  await deleteAthlete(id, name);
+  await renderAthletesAdminList();
+  await populateUserFilter();
+  await renderDashboardAthletesList();
+};
+
 async function enrichWithProfiles(rows) {
   const ids = Array.from(new Set((rows || []).map(r => r.user_id).filter(Boolean)));
   if (ids.length === 0) return rows || [];
   const { data: profs, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .in("id", ids);
   if (error) { console.error("Errore lettura profiles:", error); return rows || []; }
-  const map = new Map((profs || []).map(p => [p.id, p.full_name]));
-  return (rows || []).map(r => ({ ...r, _full_name: map.get(r.user_id) || null }));
+  const map = new Map((profs || []).map(p => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+  return (rows || []).map(r => {
+    const p = map.get(r.user_id) || {};
+    return { ...r, _full_name: p.full_name || null, _avatar_url: p.avatar_url || null };
+  });
 }
 
 function clearEditingMode() {
@@ -459,7 +526,7 @@ async function populateUserFilter() {
   if (!userFilterSelect) return;
   const { data, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .order("full_name", { ascending: true });
 
   if (error) {
@@ -484,6 +551,7 @@ async function populateUserFilter() {
     listaDiv.innerHTML = "";
     listaTitle.textContent = tr("list.workouts");
     await caricaAllenamentiMese();
+    await renderDashboardAthletesList();
   };
 }
 
@@ -516,7 +584,10 @@ isAdmin = await getIsAdmin();
   }
 
   await caricaAllenamentiMese();
-  showView("view-list");
+  // ✅ Vista iniziale dopo login
+  showView("view-dashboard");
+  // Popola la lista dashboard (oggi)
+  await renderDashboardAthletesList();
 }
 checkSession();
 
@@ -686,27 +757,50 @@ async function caricaAllenamenti(data) {
     return;
   }
 
+  // Raggruppa per atleta (user_id)
+  const groups = new Map();
   enriched.forEach(a => {
-    const who = (a._full_name || "-");
-    const canEdit = isAdmin || (currentUser && a.user_id === currentUser.id);
+    const key = a.user_id || "__unknown__";
+    if (!groups.has(key)) groups.set(key, { 
+      user_id: key, 
+      full_name: a._full_name || "-", 
+      avatar_url: a._avatar_url || null, 
+      items: [] 
+    });
+    groups.get(key).items.push(a);
+  });
 
+  // Ordina gruppi per nome
+  const sortedGroups = Array.from(groups.values()).sort((x,y) => (x.full_name||"").localeCompare((y.full_name||""), "it"));
+
+  sortedGroups.forEach(g => {
+    const avatar = g.avatar_url ? g.avatar_url : "";
     listaDiv.innerHTML += `
-      <div class="table-row">
-        <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
-        <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
-        <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
-        <div>🤝 <strong>Trainer:</strong> ${a.persone || "-"}</div>
-        <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
-        <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
-        ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
-        <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
-
-        ${canEdit ? `
-          <div class="actions">
-            <button onclick="modificaAllenamento('${a.id}')">✏️ Modifica</button>
-            <button onclick="eliminaAllenamento('${a.id}')" class="btn-secondary">🗑 Elimina</button>
-          </div>
-        ` : ""}
+      <div class="athlete-group">
+        <div class="athlete-head">
+          <img class="athlete-avatar" src="${avatar}" alt="" onerror="this.style.display='none'"/>
+          <div class="athlete-name">${escapeHtml(g.full_name)}</div>
+        </div>
+        <div class="athlete-workouts">
+          ${g.items.map(a => {
+            const who = (a._full_name || "-");
+            const canEdit = isAdmin || (currentUser && a.user_id === currentUser.id);
+            return `
+              <div class="workout-mini">
+                <div><strong>${escapeHtml(a.tipo)}</strong> • ⏰ ${escapeHtml(a.ora_inizio)}</div>
+                <div class="meta">🤝 ${escapeHtml(a.persone || "-")} • 👥 ${escapeHtml(a.numero_partecipanti || "-")} • ⏱ ${escapeHtml(a.durata ? a.durata + " min" : "-")}</div>
+                <div class="meta">📝 ${escapeHtml(a.note || "-")}</div>
+                ${isAdmin ? `<div class="meta">👤 Inserito da: ${escapeHtml(who)}</div>` : ``}
+                ${canEdit ? `
+                  <div class="actions" style="margin-top:8px;">
+                    <button onclick="modificaAllenamento('${a.id}')">✏️ Modifica</button>
+                    <button onclick="eliminaAllenamento('${a.id}')" class="btn-secondary">🗑 Elimina</button>
+                  </div>
+                ` : ``}
+              </div>
+            `;
+          }).join("")}
+        </div>
       </div>
     `;
   });
@@ -763,6 +857,75 @@ window.modificaAllenamento = async function (id) {
   alert("Modalità modifica: ora modifica i campi e poi premi SALVA ✅");
 };
 
+
+async function renderDashboardAthletesList(dateStr){
+  if (!dashAthletesList) return;
+  // default: oggi
+  const today = new Date();
+  const d = dateStr || isoDate(today);
+
+  let query = supabaseClient
+    .from("allenamenti")
+    .select("*")
+    .eq("data", d)
+    .order("ora_inizio");
+
+  if (isAdmin) {
+    if (selectedUserId && selectedUserId !== "__all__") query = query.eq("user_id", selectedUserId);
+  } else if (currentUser?.id) {
+    query = query.eq("user_id", currentUser.id);
+  }
+
+  const { data: rows, error } = await query;
+  if (error) {
+    console.error("Dashboard list error:", error);
+    dashAthletesList.innerHTML = `<p class="muted">Errore caricamento.</p>`;
+    return;
+  }
+
+  const enriched = await enrichWithProfiles(rows || []);
+  if (!enriched || enriched.length === 0) {
+    dashAthletesList.innerHTML = `<p class="muted">Nessun allenamento per ${formatDate(d)}.</p>`;
+    return;
+  }
+
+  const groups = new Map();
+  enriched.forEach(a => {
+    const key = a.user_id || "__unknown__";
+    if (!groups.has(key)) groups.set(key, {
+      full_name: a._full_name || "-",
+      avatar_url: a._avatar_url || null,
+      items: []
+    });
+    groups.get(key).items.push(a);
+  });
+
+  const sorted = Array.from(groups.values()).sort((x,y) => (x.full_name||"").localeCompare((y.full_name||""), "it"));
+
+  dashAthletesList.innerHTML = `
+    <div class="muted" style="margin-bottom:8px;">${formatDate(d)}</div>
+    ${sorted.map(g => {
+      const avatar = g.avatar_url ? g.avatar_url : "";
+      return `
+        <div class="athlete-group">
+          <div class="athlete-head">
+            <img class="athlete-avatar" src="${avatar}" alt="" onerror="this.style.display='none'"/>
+            <div class="athlete-name">${escapeHtml(g.full_name)}</div>
+          </div>
+          <div class="athlete-workouts">
+            ${g.items.map(a => `
+              <div class="workout-mini">
+                <div><strong>${escapeHtml(a.tipo)}</strong> • ⏰ ${escapeHtml(a.ora_inizio)}</div>
+                <div class="meta">👥 ${escapeHtml(a.numero_partecipanti || "-")} • ⏱ ${escapeHtml(a.durata ? a.durata + " min" : "-")}</div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
 // ================= DASHBOARD =================
 function updateDashboard() {
   const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -780,6 +943,8 @@ function updateDashboard() {
   dashSessions.textContent = String(sessions);
   dashHours.textContent = sessions > 0 ? hours.toFixed(1) : "0.0";
   dashAvgParticipants.textContent = sessions > 0 ? avgParticipants.toFixed(1) : "0.0";
+  // Aggiorna anche la lista (oggi) raggruppata per atleta
+  renderDashboardAthletesList().catch(console.error);
 }
 
 // ================= EXPORT HELPERS =================
@@ -1327,6 +1492,25 @@ async function renderProfile(){
     if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
+    if (isAdmin) {
+      // Gestione utenti (Admin)
+      const addBtn = document.getElementById("addAthleteBtn");
+      const nameIn = document.getElementById("addAthleteName");
+      const avaIn  = document.getElementById("addAthleteAvatar");
+      if (addBtn && !addBtn.dataset.bound) {
+        addBtn.dataset.bound = "1";
+        addBtn.onclick = async () => {
+          await addAthlete((nameIn?.value || "").trim(), (avaIn?.value || "").trim());
+          if (nameIn) nameIn.value = "";
+          if (avaIn) avaIn.value = "";
+          await renderAthletesAdminList();
+          await populateUserFilter();
+          await renderDashboardAthletesList();
+        };
+      }
+      await renderAthletesAdminList();
+    }
+
   } catch(_) {
     if (roleEl) roleEl.textContent = "Utente";
   }
