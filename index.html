@@ -49,16 +49,22 @@
       <section id="view-dashboard">
         <h2 class="view-title">Dashboard</h2>
 
-        <div class="card">
-          <label for="dashPeriodSelect"><strong>Periodo</strong></label>
-          <select id="dashPeriodSelect">
+        <!-- Selettore atleta (visibile per admin) -->
+        <div id="dashFilter" class="admin-filter" style="display:none;">
+          <label for="dashUserSelect">Atleta</label>
+          <select id="dashUserSelect"></select>
+        </div>
+
+        <div class="dash-split">
+          <div class="dash-col">
+<div class="card">
+          <label for="dashPeriod"><strong>Periodo</strong></label>
+          <select id="dashPeriod">
             <option value="thisMonth">Questo mese</option>
             <option value="lastMonth">Mese scorso</option>
             <option value="thisYear">Quest'anno</option>
             <option value="all">Tutto</option>
           </select>
-
-          <div id="dashPeriod" class="muted" style="margin-top:6px;"></div>
 
           <div class="stats-grid">
             <div class="stat-card">
@@ -82,11 +88,6 @@
         </div>
 
         <div class="card">
-          <h3>Atleti</h3>
-          <div id="dashAthletes" class="athlete-grid"></div>
-        </div>
-
-        <div class="card">
           <h3>Statistiche</h3>
           <div class="stats-grid">
             <div class="stat-card">
@@ -104,6 +105,9 @@
           </div>
         </div>
 
+          </div>
+
+          <div class="dash-col">
         <!-- Export shortcuts -->
         <div class="card">
           <h3>Export</h3>
@@ -136,6 +140,8 @@
             </div>
 
             <button id="applyExport" style="margin-top:10px;">Applica</button>
+          </div>
+        </div>
           </div>
         </div>
       </section>
