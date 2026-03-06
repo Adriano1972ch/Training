@@ -43,6 +43,13 @@
       </div>
     </div>
 
+    <div id="userFilterWrap" class="admin-filter" style="display:none;">
+      <label for="userFilter">Atleta attiva</label>
+      <select id="userFilter">
+        <option value="__all__">Tutte</option>
+      </select>
+    </div>
+
     <div class="views">
 
       <!-- DASHBOARD -->
@@ -56,7 +63,13 @@
             <option value="lastMonth">Mese scorso</option>
             <option value="thisYear">Quest'anno</option>
             <option value="all">Tutto</option>
+            <option value="custom">Intervallo personalizzato</option>
           </select>
+          <div id="dashCustomRange" class="row" style="display:none; gap:10px;">
+            <input id="dashDateFrom" type="date" />
+            <input id="dashDateTo" type="date" />
+          </div>
+          <div id="dashPeriodLabel" class="whoami" style="margin-bottom:12px;"></div>
 
           <div class="stats-grid">
             <div class="stat-card">
@@ -77,6 +90,21 @@
             <button id="dashGoCalendarBtn">Vai al Calendario</button>
             <button id="dashGoListBtn" class="btn-secondary">Vai alla Lista</button>
           </div>
+        </div>
+
+        <div id="dashboardCompareCard" class="card" style="display:none;">
+          <h3>Confronto atlete</h3>
+          <div class="row" style="gap:10px;">
+            <div style="flex:1;">
+              <label for="compareAthlete1"><strong>Atleta 1</strong></label>
+              <select id="compareAthlete1"></select>
+            </div>
+            <div style="flex:1;">
+              <label for="compareAthlete2"><strong>Atleta 2</strong></label>
+              <select id="compareAthlete2"></select>
+            </div>
+          </div>
+          <div id="compareSummary" class="stats-grid" style="margin-top:10px;"></div>
         </div>
 
         <div class="card">
@@ -150,14 +178,11 @@
         <div class="card">
           <h3>Aggiungi allenamento</h3>
           <form id="form">
-            <label>Tipo</label>
-            <select id="tipo">
-              <option value="Allenamento">Allenamento</option>
-              <option value="Cardio">Cardio</option>
-              <option value="Forza">Forza</option>
-              <option value="Mobilità">Mobilità</option>
-              <option value="Altro">Altro</option>
-            </select>
+            <label>Tipo allenamento</label>
+            <select id="tipo"></select>
+
+            <label>Allenatore</label>
+            <select id="allenatore"></select>
 
             <label>Data</label>
             <input id="data" type="date" required />
@@ -171,8 +196,8 @@
             <label>Numero partecipanti</label>
             <input id="numero_partecipanti" type="number" min="0" step="1" placeholder="Es. 10" />
 
-            <label>Persone (nomi, separati da virgola)</label>
-            <input id="persone" type="text" placeholder="Es. Marco, Luca, ..." />
+            <label>Persone / dettagli aggiuntivi</label>
+            <input id="persone" type="text" placeholder="Es. gruppo, assistenti, note rapide" />
 
             <label>Note</label>
             <textarea id="note" rows="3" placeholder="Note..."></textarea>
@@ -224,7 +249,27 @@
 
         <div id="adminPanel" class="card" style="display:none;">
           <h3>Admin</h3>
-          <p class="muted">Pannello admin (visibile solo se autorizzato).</p>
+          <p class="muted">Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.</p>
+
+          <div class="admin-grid">
+            <div>
+              <label><strong>Allenatori</strong></label>
+              <div class="row" style="gap:10px;">
+                <input id="coachNameInput" type="text" placeholder="Nuovo allenatore" />
+                <button id="addCoachBtn" type="button">Aggiungi</button>
+              </div>
+              <div id="coachList" class="chip-list"></div>
+            </div>
+
+            <div>
+              <label><strong>Tipi allenamento</strong></label>
+              <div class="row" style="gap:10px;">
+                <input id="trainingTypeInput" type="text" placeholder="Nuovo tipo allenamento" />
+                <button id="addTrainingTypeBtn" type="button">Aggiungi</button>
+              </div>
+              <div id="trainingTypeList" class="chip-list"></div>
+            </div>
+          </div>
         </div>
       </section>
 
