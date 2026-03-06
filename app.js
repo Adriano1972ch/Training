@@ -337,10 +337,6 @@ const dashPeriod = document.getElementById("dashPeriod");
 const userFilterSelect = document.getElementById("userFilter");
 const userFilterWrap = document.getElementById("userFilterWrap");
 
-// Dashboard filter (Home)
-const dashUserSelect = document.getElementById("dashUserSelect");
-const dashFilterWrap = document.getElementById("dashFilter");
-
 // List
 const listaDiv = document.getElementById("lista");
 const listaTitle = document.getElementById("lista-title");
@@ -459,11 +455,8 @@ dashGoCalendarBtn?.addEventListener("click", () => showView("view-calendar"));
 dashGoListBtn?.addEventListener("click", () => showView("view-list"));
 
 // ================= DATA LOAD =================
-async function populateUserFilter(selectEl) {
-  const el = selectEl || userFilterSelect || dashUserSelect;
-  if (!el) return; // page may not have the filter UI
-  if (!el) return;
-
+async function populateUserFilter() {
+  if (!userFilterSelect) return;
   const { data, error } = await supabaseClient
     .from("profiles")
     .select("id, full_name")
@@ -471,26 +464,22 @@ async function populateUserFilter(selectEl) {
 
   if (error) {
     console.error("Errore caricamento utenti:", error);
-    el.innerHTML = `<option value="__all__">Tutti</option>`;
-    el.value = "__all__";
+    userFilterSelect.innerHTML = `<option value="__all__">Tutti</option>`;
+    userFilterSelect.value = "__all__";
     selectedUserId = "__all__";
     return;
   }
 
   const opts = [];
   opts.push(`<option value="__all__">Tutti</option>`);
-  // comodo: opzione rapida per te (admin)
-  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Io</option>`);
+  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Admin</option>`);
   (data || []).forEach(p => opts.push(`<option value="${p.id}">${p.full_name || "(senza nome)"}</option>`));
-  el.innerHTML = opts.join("\n");
+  userFilterSelect.innerHTML = opts.join("\n");
+  userFilterSelect.value = "__all__";
+  selectedUserId = "__all__";
 
-  // default: tutti
-  el.value = selectedUserId || "__all__";
-  if (!el.value) el.value = "__all__";
-  selectedUserId = el.value || "__all__";
-
-  el.onchange = async () => {
-    selectedUserId = el.value || "__all__";
+  userFilterSelect.onchange = async () => {
+    selectedUserId = userFilterSelect.value || "__all__";
     giornoSelezionato = null;
     listaDiv.innerHTML = "";
     listaTitle.textContent = tr("list.workouts");
@@ -522,18 +511,12 @@ isAdmin = await getIsAdmin();
   whoami.textContent = isAdmin ? `👑 ${display} (admin)` : `👤 ${display}`;
 
   if (userFilterSelect && userFilterWrap) {
-    if (isAdmin) { userFilterWrap.style.display = "flex"; await populateUserFilter(userFilterSelect); }
+    if (isAdmin) { userFilterWrap.style.display = "flex"; await populateUserFilter(); }
     else { userFilterWrap.style.display = "none"; }
   }
 
-  // Dashboard filter (Home)
-  if (dashUserSelect && dashFilterWrap) {
-    if (isAdmin) { dashFilterWrap.style.display = "flex"; await populateUserFilter(dashUserSelect); }
-    else { dashFilterWrap.style.display = "none"; }
-  }
-
   await caricaAllenamentiMese();
-  showView("view-dashboard");
+  showView("view-list");
 }
 checkSession();
 
