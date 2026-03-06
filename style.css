@@ -496,15 +496,3 @@ h3{ margin: 14px 0 10px; }
   user-select:none;
 }
 .mini-avatar.has-photo{ background-color: transparent; }
-
-
-/* ================= DASHBOARD SPLIT ================= */
-.dash-split{
-  display:grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-@media (min-width: 860px){
-  .dash-split{ grid-template-columns: 1fr 1fr; align-items:start; }
-}
-.dash-col{ display:grid; gap: 12px; }
