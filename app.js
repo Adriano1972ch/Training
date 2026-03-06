@@ -24,6 +24,7 @@ const durata = document.getElementById("durata");
 const numero_partecipanti = document.getElementById("numero_partecipanti");
 const persone = document.getElementById("persone");
 const note = document.getElementById("note");
+const allenatore = document.getElementById("allenatore");
 
 const prevMonthBtn = document.getElementById("prevMonth");
 const nextMonthBtn = document.getElementById("nextMonth");
@@ -336,6 +337,20 @@ const dashPeriod = document.getElementById("dashPeriod");
 // Admin filter
 const userFilterSelect = document.getElementById("userFilter");
 const userFilterWrap = document.getElementById("userFilterWrap");
+const dashCustomRange = document.getElementById("dashCustomRange");
+const dashDateFrom = document.getElementById("dashDateFrom");
+const dashDateTo = document.getElementById("dashDateTo");
+const dashPeriodLabel = document.getElementById("dashPeriodLabel");
+const dashboardCompareCard = document.getElementById("dashboardCompareCard");
+const compareAthlete1 = document.getElementById("compareAthlete1");
+const compareAthlete2 = document.getElementById("compareAthlete2");
+const compareSummary = document.getElementById("compareSummary");
+const coachNameInput = document.getElementById("coachNameInput");
+const addCoachBtn = document.getElementById("addCoachBtn");
+const coachList = document.getElementById("coachList");
+const trainingTypeInput = document.getElementById("trainingTypeInput");
+const addTrainingTypeBtn = document.getElementById("addTrainingTypeBtn");
+const trainingTypeList = document.getElementById("trainingTypeList");
 
 // List
 const listaDiv = document.getElementById("lista");
@@ -352,9 +367,150 @@ let currentUser = null;
 let isAdmin = false;
 
 let selectedUserId = "__all__"; // "__all__" = no filter
+let selectedCompareUser1 = "__all__";
+let selectedCompareUser2 = "__all__";
 
 // ✅ editing mode (modifica)
 let editingId = null;
+
+
+const DEFAULT_COACHES = ["Coach principale", "Preparatore", "Fisioterapista"];
+const DEFAULT_TRAINING_TYPES = ["Allenamento", "Cardio", "Forza", "Mobilità", "Tecnica", "Recupero"];
+const COACHES_KEY = "training_app_coaches";
+const TRAINING_TYPES_KEY = "training_app_types";
+
+function getStoredArray(key, fallback){
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || "null");
+    if (Array.isArray(raw) && raw.length) return Array.from(new Set(raw.map(v => String(v || "").trim()).filter(Boolean)));
+  } catch(_) {}
+  return [...fallback];
+}
+function setStoredArray(key, arr){
+  const clean = Array.from(new Set((arr || []).map(v => String(v || "").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b, 'it'));
+  localStorage.setItem(key, JSON.stringify(clean));
+  return clean;
+}
+function getCoaches(){ return getStoredArray(COACHES_KEY, DEFAULT_COACHES); }
+function getTrainingTypes(){ return getStoredArray(TRAINING_TYPES_KEY, DEFAULT_TRAINING_TYPES); }
+function populateSimpleSelect(selectEl, items, placeholder){
+  if (!selectEl) return;
+  const opts = (items || []).map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${v}</option>`);
+  selectEl.innerHTML = placeholder ? `<option value="">${placeholder}</option>` + opts.join('') : opts.join('');
+}
+function refreshAdminLists(){
+  if (coachList) coachList.innerHTML = getCoaches().map(name => `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
+  if (trainingTypeList) trainingTypeList.innerHTML = getTrainingTypes().map(name => `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
+}
+function refreshFormOptions(){
+  const currentTipo = tipo?.value || "";
+  const currentCoach = allenatore?.value || "";
+  populateSimpleSelect(tipo, getTrainingTypes(), "Seleziona tipo allenamento");
+  populateSimpleSelect(allenatore, getCoaches(), "Seleziona allenatore");
+  if (tipo && currentTipo) tipo.value = currentTipo;
+  if (allenatore && currentCoach) allenatore.value = currentCoach;
+}
+window.removeCoach = function(encoded){
+  const name = decodeURIComponent(encoded);
+  setStoredArray(COACHES_KEY, getCoaches().filter(v => v !== name));
+  refreshAdminLists(); refreshFormOptions();
+};
+window.removeTrainingType = function(encoded){
+  const name = decodeURIComponent(encoded);
+  setStoredArray(TRAINING_TYPES_KEY, getTrainingTypes().filter(v => v !== name));
+  refreshAdminLists(); refreshFormOptions();
+};
+function bindAdminCatalogActions(){
+  addCoachBtn && (addCoachBtn.onclick = () => {
+    const name = (coachNameInput?.value || '').trim();
+    if (!name) return;
+    setStoredArray(COACHES_KEY, [...getCoaches(), name]);
+    coachNameInput.value = '';
+    refreshAdminLists(); refreshFormOptions();
+  });
+  addTrainingTypeBtn && (addTrainingTypeBtn.onclick = () => {
+    const name = (trainingTypeInput?.value || '').trim();
+    if (!name) return;
+    setStoredArray(TRAINING_TYPES_KEY, [...getTrainingTypes(), name]);
+    trainingTypeInput.value = '';
+    refreshAdminLists(); refreshFormOptions();
+  });
+}
+function getDashboardRange(){
+  const mode = dashPeriod?.value || 'thisMonth';
+  const now = new Date();
+  let start, end;
+  if (mode === 'thisMonth') {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  } else if (mode === 'lastMonth') {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (mode === 'thisYear') {
+    start = new Date(now.getFullYear(), 0, 1);
+    end = new Date(now.getFullYear(), 11, 31);
+  } else if (mode === 'custom' && dashDateFrom?.value && dashDateTo?.value) {
+    start = new Date(dashDateFrom.value + 'T00:00:00');
+    end = new Date(dashDateTo.value + 'T00:00:00');
+  } else {
+    start = new Date(2000, 0, 1);
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  return { start, end, fromDate: isoDate(start), toDate: isoDate(end), mode };
+}
+function filterRowsByDashboardRange(rows){
+  const { fromDate, toDate } = getDashboardRange();
+  return (rows || []).filter(r => r.data >= fromDate && r.data <= toDate);
+}
+async function fetchAthletes(){
+  const { data, error } = await supabaseClient.from('profiles').select('id, full_name').order('full_name', { ascending: true });
+  if (error) { console.error(error); return []; }
+  return data || [];
+}
+async function populateCompareSelectors(){
+  if (!compareAthlete1 || !compareAthlete2) return;
+  const athletes = await fetchAthletes();
+  const opts = ['<option value="__all__">Seleziona atleta</option>'].concat(athletes.map(a => `<option value="${a.id}">${a.full_name || a.id}</option>`));
+  compareAthlete1.innerHTML = opts.join('');
+  compareAthlete2.innerHTML = opts.join('');
+  if (selectedCompareUser1) compareAthlete1.value = selectedCompareUser1;
+  if (selectedCompareUser2) compareAthlete2.value = selectedCompareUser2;
+}
+async function updateCompareDashboard(){
+  if (!dashboardCompareCard || !compareSummary) return;
+  dashboardCompareCard.style.display = isAdmin ? 'block' : 'none';
+  if (!isAdmin) return;
+  await populateCompareSelectors();
+  const ids = [compareAthlete1?.value, compareAthlete2?.value].filter(v => v && v !== '__all__');
+  if (ids.length < 2) {
+    compareSummary.innerHTML = '<div class="muted">Seleziona due atlete per vedere il confronto.</div>';
+    return;
+  }
+  const { fromDate, toDate } = getDashboardRange();
+  const { data, error } = await supabaseClient.from('allenamenti').select('user_id, durata, numero_partecipanti').in('user_id', ids).gte('data', fromDate).lte('data', toDate);
+  if (error) { compareSummary.innerHTML = '<div class="muted">Errore nel confronto.</div>'; return; }
+  const athletes = await fetchAthletes();
+  const nameMap = new Map(athletes.map(a => [a.id, a.full_name || 'Atleta']));
+  const cards = ids.map(id => {
+    const rows = (data || []).filter(r => r.user_id === id);
+    const sessions = rows.length;
+    const hours = rows.reduce((s, r) => s + safeNumber(r.durata), 0) / 60;
+    const avg = sessions ? rows.reduce((s, r) => s + safeNumber(r.numero_partecipanti), 0) / sessions : 0;
+    return `<div class="compare-card"><div class="stat-label">${nameMap.get(id) || 'Atleta'}</div><div class="stat-value">${sessions}</div><div class="muted">Sessioni</div><div class="muted">Ore: ${hours.toFixed(1)} · Media partecipanti: ${avg.toFixed(1)}</div></div>`;
+  });
+  compareSummary.innerHTML = cards.join('');
+}
+function syncDashboardRangeUI(){
+  if (dashCustomRange) dashCustomRange.style.display = (dashPeriod?.value === 'custom') ? 'flex' : 'none';
+  if (dashPeriod?.value === 'custom' && dashDateFrom && dashDateTo) {
+    if (!dashDateFrom.value || !dashDateTo.value) {
+      const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      dashDateFrom.value = isoDate(start);
+      dashDateTo.value = isoDate(end);
+    }
+  }
+}
 
 // ================= UTILS =================
 function isoDate(d) {
@@ -412,6 +568,8 @@ async function enrichWithProfiles(rows) {
 function clearEditingMode() {
   editingId = null;
   if (submitBtn) submitBtn.textContent = "➕ Aggiungi";
+  refreshFormOptions();
+  if (persone) persone.value = "";
 }
 
 // ================= AUTH UI =================
@@ -454,6 +612,13 @@ navButtons.forEach(btn => btn.addEventListener("click", () => showView(btn.datas
 dashGoCalendarBtn?.addEventListener("click", () => showView("view-calendar"));
 dashGoListBtn?.addEventListener("click", () => showView("view-list"));
 
+
+dashPeriod?.addEventListener("change", () => updateDashboard());
+dashDateFrom?.addEventListener("change", () => updateDashboard());
+dashDateTo?.addEventListener("change", () => updateDashboard());
+compareAthlete1?.addEventListener("change", () => { selectedCompareUser1 = compareAthlete1.value; updateCompareDashboard(); });
+compareAthlete2?.addEventListener("change", () => { selectedCompareUser2 = compareAthlete2.value; updateCompareDashboard(); });
+
 // ================= DATA LOAD =================
 async function populateUserFilter() {
   if (!userFilterSelect) return;
@@ -471,8 +636,8 @@ async function populateUserFilter() {
   }
 
   const opts = [];
-  opts.push(`<option value="__all__">Tutti</option>`);
-  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Admin</option>`);
+  opts.push(`<option value="__all__">Tutte le atlete</option>`);
+  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Le mie sessioni</option>`);
   (data || []).forEach(p => opts.push(`<option value="${p.id}">${p.full_name || "(senza nome)"}</option>`));
   userFilterSelect.innerHTML = opts.join("\n");
   userFilterSelect.value = "__all__";
@@ -515,8 +680,11 @@ isAdmin = await getIsAdmin();
     else { userFilterWrap.style.display = "none"; }
   }
 
+  refreshFormOptions();
+  bindAdminCatalogActions();
+  refreshAdminLists();
   await caricaAllenamentiMese();
-  showView("view-list");
+  showView("view-dashboard");
 }
 checkSession();
 
@@ -550,7 +718,7 @@ form.onsubmit = async (e) => {
     ora_inizio: ora_inizio.value,
     durata: durata.value || null,
     numero_partecipanti: numero_partecipanti.value || null,
-    persone: persone.value || null,
+    persone: [allenatore?.value || "", persone.value || ""].filter(Boolean).join(" | ") || null,
     note: note.value || null
   };
 
@@ -695,7 +863,8 @@ async function caricaAllenamenti(data) {
         <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
         <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
         <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
-        <div>🤝 <strong>Trainer:</strong> ${a.persone || "-"}</div>
+        <div>🤝 <strong>Allenatore:</strong> ${(a.persone || '-').split(' | ')[0] || '-'}</div>
+        <div>👥 <strong>Dettagli:</strong> ${(a.persone || '').split(' | ').slice(1).join(' | ') || '-'}</div>
         <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
         <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
         ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
@@ -747,16 +916,19 @@ window.modificaAllenamento = async function (id) {
   editingId = id;
 
   // riempi form
+  refreshFormOptions();
   tipo.value = data.tipo || "";
   dataInput.value = data.data || "";
   ora_inizio.value = data.ora_inizio || "";
   durata.value = data.durata || "";
   numero_partecipanti.value = data.numero_partecipanti || "";
-  persone.value = data.persone || "";
+  const parts = String(data.persone || "").split(" | ");
+  if (allenatore) allenatore.value = parts[0] || "";
+  persone.value = parts.slice(1).join(" | ") || "";
   note.value = data.note || "";
 
-  // porta l'utente dove vede il form (di solito dashboard)
-  showView("view-list");
+  // porta l'utente al form del calendario
+  showView("view-calendar");
   form.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
   if (submitBtn) submitBtn.textContent = "💾 Salva";
@@ -764,22 +936,32 @@ window.modificaAllenamento = async function (id) {
 };
 
 // ================= DASHBOARD =================
-function updateDashboard() {
-  const start = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-  const end = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-  dashPeriod.textContent = `${formatDate(isoDate(start))} → ${formatDate(isoDate(end))} (${monthLabel(currentMonth)})`;
-
-  const rows = allenamentiMese || [];
-  const sessions = rows.length;
-  const totalMinutes = rows.reduce((acc, r) => acc + safeNumber(r.durata), 0);
+async function updateDashboard() {
+  syncDashboardRangeUI();
+  const { start, end, fromDate, toDate, mode } = getDashboardRange();
+  if (dashPeriodLabel) {
+    dashPeriodLabel.textContent = `${formatDate(isoDate(start))} → ${formatDate(isoDate(end))}${mode === 'custom' ? ' (personalizzato)' : ''}`;
+  }
+  let query = supabaseClient.from("allenamenti").select("durata, numero_partecipanti, data, user_id").gte("data", fromDate).lte("data", toDate);
+  if (isAdmin && selectedUserId !== "__all__") query = query.eq("user_id", selectedUserId);
+  if (!isAdmin && currentUser?.id) query = query.eq("user_id", currentUser.id);
+  const { data: rows, error } = await query;
+  const safeRows = error ? [] : (rows || []);
+  const sessions = safeRows.length;
+  const totalMinutes = safeRows.reduce((acc, r) => acc + safeNumber(r.durata), 0);
   const hours = totalMinutes / 60;
-
-  const participantsSum = rows.reduce((acc, r) => acc + safeNumber(r.numero_partecipanti), 0);
+  const participantsSum = safeRows.reduce((acc, r) => acc + safeNumber(r.numero_partecipanti), 0);
   const avgParticipants = sessions > 0 ? (participantsSum / sessions) : 0;
-
   dashSessions.textContent = String(sessions);
   dashHours.textContent = sessions > 0 ? hours.toFixed(1) : "0.0";
   dashAvgParticipants.textContent = sessions > 0 ? avgParticipants.toFixed(1) : "0.0";
+  const ps = document.getElementById("pStatSessions");
+  const ph = document.getElementById("pStatHours");
+  const pa = document.getElementById("pStatAvg");
+  if (ps) ps.textContent = dashSessions.textContent;
+  if (ph) ph.textContent = dashHours.textContent;
+  if (pa) pa.textContent = dashAvgParticipants.textContent;
+  await updateCompareDashboard();
 }
 
 // ================= EXPORT HELPERS =================
@@ -1327,6 +1509,7 @@ async function renderProfile(){
     if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
+    if (isAdmin) { refreshAdminLists(); refreshFormOptions(); }
   } catch(_) {
     if (roleEl) roleEl.textContent = "Utente";
   }
