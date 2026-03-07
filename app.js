@@ -25,8 +25,6 @@ const numero_partecipanti = document.getElementById("numero_partecipanti");
 const persone = document.getElementById("persone");
 const note = document.getElementById("note");
 const allenatore = document.getElementById("allenatore");
-const tipoPreview = document.getElementById("tipoPreview");
-const allenatorePreview = document.getElementById("allenatorePreview");
 
 const prevMonthBtn = document.getElementById("prevMonth");
 const nextMonthBtn = document.getElementById("nextMonth");
@@ -400,14 +398,6 @@ function populateSimpleSelect(selectEl, items, placeholder){
   const opts = (items || []).map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${v}</option>`);
   selectEl.innerHTML = placeholder ? `<option value="">${placeholder}</option>` + opts.join('') : opts.join('');
 }
-
-function syncSelectPreview(selectEl, previewEl, prefix){
-  if (!selectEl || !previewEl) return;
-  const option = selectEl.options && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
-  const label = option ? String(option.textContent || option.value || "").trim() : "";
-  previewEl.textContent = prefix + ": " + (label || "—");
-  selectEl.title = label || "";
-}
 function refreshAdminLists(){
   if (coachList) coachList.innerHTML = getCoaches().map(name => `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
   if (trainingTypeList) trainingTypeList.innerHTML = getTrainingTypes().map(name => `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
@@ -417,7 +407,6 @@ function refreshFormOptions(){
   const currentCoach = allenatore?.value || "";
   populateSimpleSelect(tipo, getTrainingTypes(), "Seleziona tipo allenamento");
   populateSimpleSelect(allenatore, getCoaches(), "Seleziona allenatore");
-  syncSelectPreview(allenatore, allenatorePreview, "Allenatore selezionato");
   if (tipo && currentTipo) tipo.value = currentTipo;
   if (allenatore && currentCoach) allenatore.value = currentCoach;
 }
@@ -569,11 +558,23 @@ async function enrichWithProfiles(rows) {
   if (ids.length === 0) return rows || [];
   const { data: profs, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .in("id", ids);
   if (error) { console.error("Errore lettura profiles:", error); return rows || []; }
-  const map = new Map((profs || []).map(p => [p.id, p.full_name]));
-  return (rows || []).map(r => ({ ...r, _full_name: map.get(r.user_id) || null }));
+  const map = new Map((profs || []).map(p => [p.id, p]));
+  return (rows || []).map(r => ({
+    ...r,
+    _full_name: map.get(r.user_id)?.full_name || null,
+    _avatar_url: map.get(r.user_id)?.avatar_url || null
+  }));
+}
+
+
+function avatarHtml(url, name){
+  const safeName = String(name || "").trim();
+  const initial = safeName ? safeName.charAt(0).toUpperCase() : "👤";
+  const style = url ? ` style="background-image:url('${withCacheBust(url)}')"` : "";
+  return `<div class="athlete-avatar"${style}>${url ? "" : initial}</div>`;
 }
 
 function clearEditingMode() {
@@ -788,7 +789,6 @@ async function caricaAllenamentiMese() {
   updateDashboard();
 }
 
-
 function renderCalendar() {
   const grid = document.getElementById("calendar-grid");
   const title = document.getElementById("calendarTitle");
@@ -800,9 +800,7 @@ function renderCalendar() {
   const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() || 7;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
 
-  for (let i = 1; i < firstDay; i++) {
-    grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
-  }
+  for (let i = 1; i < firstDay; i++) grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr =
@@ -871,17 +869,25 @@ async function caricaAllenamenti(data) {
   enriched.forEach(a => {
     const who = (a._full_name || "-");
     const canEdit = isAdmin || (currentUser && a.user_id === currentUser.id);
+    const coachName = (a.persone || '-').split(' | ')[0] || '-';
+    const details = (a.persone || '').split(' | ').slice(1).join(' | ') || '-';
 
     listaDiv.innerHTML += `
       <div class="table-row">
+        <div class="athlete-head">
+          ${avatarHtml(a._avatar_url, who)}
+          <div class="athlete-meta">
+            <div class="athlete-name">${who}</div>
+            <div class="athlete-sub">Atleta</div>
+          </div>
+        </div>
         <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
         <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
         <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
-        <div>🤝 <strong>Allenatore:</strong> ${(a.persone || '-').split(' | ')[0] || '-'}</div>
-        <div>👥 <strong>Dettagli:</strong> ${(a.persone || '').split(' | ').slice(1).join(' | ') || '-'}</div>
+        <div>🤝 <strong>Allenatore:</strong> ${coachName}</div>
+        <div>👥 <strong>Dettagli:</strong> ${details}</div>
         <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
         <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
-        ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
         <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
 
         ${canEdit ? `
@@ -1545,7 +1551,3 @@ async function renderProfile(){
   const lb2 = document.getElementById("logoutBtn2");
   if (lb2) lb2.onclick = () => document.getElementById("logoutBtn")?.click();
 }
-
-
-tipo?.addEventListener("change", () => syncSelectPreview(tipo, tipoPreview, "Tipo allenamento selezionato"));
-allenatore?.addEventListener("change", () => syncSelectPreview(allenatore, allenatorePreview, "Allenatore selezionato"));
