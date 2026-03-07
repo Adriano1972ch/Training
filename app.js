@@ -247,6 +247,13 @@ function updateMiniAvatar(url){
   }
 }
 
+function avatarHtml(url, name){
+  const safeName = String(name || "").trim();
+  const initial = safeName ? safeName.charAt(0).toUpperCase() : "👤";
+  const style = url ? ` style="background-image:url('${withCacheBust(url)}')"` : "";
+  return `<div class="athlete-avatar"${style}>${url ? "" : initial}</div>`;
+}
+
 function withCacheBust(url){
   if (!url) return url;
   const ts = localStorage.getItem(avatarKey("ts")) || String(Date.now());
@@ -569,14 +576,6 @@ async function enrichWithProfiles(rows) {
   }));
 }
 
-
-function avatarHtml(url, name){
-  const safeName = String(name || "").trim();
-  const initial = safeName ? safeName.charAt(0).toUpperCase() : "👤";
-  const style = url ? ` style="background-image:url('${withCacheBust(url)}')"` : "";
-  return `<div class="athlete-avatar"${style}>${url ? "" : initial}</div>`;
-}
-
 function clearEditingMode() {
   editingId = null;
   if (submitBtn) submitBtn.textContent = "➕ Aggiungi";
@@ -800,7 +799,9 @@ function renderCalendar() {
   const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() || 7;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
 
-  for (let i = 1; i < firstDay; i++) grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
+  for (let i = 1; i < firstDay; i++) {
+    grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr =
