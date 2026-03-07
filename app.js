@@ -25,6 +25,8 @@ const numero_partecipanti = document.getElementById("numero_partecipanti");
 const persone = document.getElementById("persone");
 const note = document.getElementById("note");
 const allenatore = document.getElementById("allenatore");
+const tipoPreview = document.getElementById("tipoPreview");
+const allenatorePreview = document.getElementById("allenatorePreview");
 
 const prevMonthBtn = document.getElementById("prevMonth");
 const nextMonthBtn = document.getElementById("nextMonth");
@@ -398,6 +400,14 @@ function populateSimpleSelect(selectEl, items, placeholder){
   const opts = (items || []).map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${v}</option>`);
   selectEl.innerHTML = placeholder ? `<option value="">${placeholder}</option>` + opts.join('') : opts.join('');
 }
+
+function syncSelectPreview(selectEl, previewEl, prefix){
+  if (!selectEl || !previewEl) return;
+  const option = selectEl.options && selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+  const label = option ? String(option.textContent || option.value || "").trim() : "";
+  previewEl.textContent = prefix + ": " + (label || "—");
+  selectEl.title = label || "";
+}
 function refreshAdminLists(){
   if (coachList) coachList.innerHTML = getCoaches().map(name => `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
   if (trainingTypeList) trainingTypeList.innerHTML = getTrainingTypes().map(name => `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
@@ -407,6 +417,7 @@ function refreshFormOptions(){
   const currentCoach = allenatore?.value || "";
   populateSimpleSelect(tipo, getTrainingTypes(), "Seleziona tipo allenamento");
   populateSimpleSelect(allenatore, getCoaches(), "Seleziona allenatore");
+  syncSelectPreview(allenatore, allenatorePreview, "Allenatore selezionato");
   if (tipo && currentTipo) tipo.value = currentTipo;
   if (allenatore && currentCoach) allenatore.value = currentCoach;
 }
@@ -777,6 +788,7 @@ async function caricaAllenamentiMese() {
   updateDashboard();
 }
 
+
 function renderCalendar() {
   const grid = document.getElementById("calendar-grid");
   const title = document.getElementById("calendarTitle");
@@ -788,7 +800,9 @@ function renderCalendar() {
   const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() || 7;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
 
-  for (let i = 1; i < firstDay; i++) grid.innerHTML += "<div></div>";
+  for (let i = 1; i < firstDay; i++) {
+    grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr =
@@ -799,7 +813,6 @@ function renderCalendar() {
     const dayRows = allenamentiMese.filter(a => a.data === dateStr);
     const hasWorkout = dayRows.length > 0;
 
-    // Color coding: usa prima il nome profilo (_full_name = "Inserito da"), con fallback su persone/note
     const namesText = dayRows
       .map(r => `${r._full_name || ""} ${r.persone || ""} ${r.note || ""}`)
       .join(" ")
@@ -816,10 +829,11 @@ function renderCalendar() {
     else if (hasVivienne) colorClass = "workout-vivienne";
 
     grid.innerHTML += `
-      <div class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
-           onclick="selezionaGiorno('${dateStr}')">
-        ${d}
-      </div>`;
+      <button class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
+              type="button"
+              onclick="selezionaGiorno('${dateStr}')">
+        <span>${d}</span>
+      </button>`;
   }
 }
 
@@ -1531,3 +1545,7 @@ async function renderProfile(){
   const lb2 = document.getElementById("logoutBtn2");
   if (lb2) lb2.onclick = () => document.getElementById("logoutBtn")?.click();
 }
+
+
+tipo?.addEventListener("change", () => syncSelectPreview(tipo, tipoPreview, "Tipo allenamento selezionato"));
+allenatore?.addEventListener("change", () => syncSelectPreview(allenatore, allenatorePreview, "Allenatore selezionato"));
