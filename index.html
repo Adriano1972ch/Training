@@ -172,19 +172,17 @@
             <button id="nextMonth" class="btn-secondary" style="width:auto;">▶</button>
           </div>
 
-          <div class="calendar-weekdays" aria-hidden="true"><div>Lun</div><div>Mar</div><div>Mer</div><div>Gio</div><div>Ven</div><div>Sab</div><div>Dom</div></div><div id="calendar-grid"></div><div class="legend" aria-label="Legenda colori calendario"><div class="legend-item"><span class="dot dot-sophie"></span>Sophie</div><div class="legend-item"><span class="dot dot-vivienne"></span>Vivienne</div><div class="legend-item"><span class="dot dot-both"></span>Entrambe</div></div>
+          <div id="calendar-grid"></div>
         </div>
 
         <div class="card">
           <h3>Aggiungi allenamento</h3>
           <form id="form">
             <label>Tipo allenamento</label>
-            <div class="select-shell"><select id="tipo"></select></div>
-            <div id="tipoPreview" class="select-preview">Tipo allenamento selezionato: —</div>
+            <select id="tipo"></select>
 
             <label>Allenatore</label>
-            <div class="select-shell"><select id="allenatore"></select></div>
-            <div id="allenatorePreview" class="select-preview">Allenatore selezionato: —</div>
+            <select id="allenatore"></select>
 
             <label>Data</label>
             <input id="data" type="date" required />
