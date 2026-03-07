@@ -567,42 +567,45 @@ h3{ margin: 14px 0 10px; }
 }
 
 
-
-/* ===== Smaller calendar ===== */
+/* ===== Extra compact calendar with weekdays ===== */
 #view-calendar .card:first-child{
-  max-width: 560px;
+  max-width: 420px;
   margin: 0 auto;
+  padding: 10px;
 }
 
 .calendar-header{
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
 .calendar-title{
   flex: 1;
   text-align: center;
   min-width: 0;
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .calendar-weekdays,
 #calendar-grid{
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  gap: 2px;
 }
 
 .calendar-weekdays{
-  margin: 6px 0 8px;
+  margin: 4px 0 6px;
 }
 
 .calendar-weekdays div{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 20px;
-  font-size: 11px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height: 16px;
+  padding: 0;
+  font-size: 9px;
   font-weight: 800;
+  line-height: 1;
   color: var(--muted);
   text-transform: uppercase;
   opacity: 1;
@@ -610,80 +613,74 @@ h3{ margin: 14px 0 10px; }
 
 .calendar-day{
   margin: 0;
-  min-height: 32px;
+  min-height: 24px;
+  height: 24px;
   padding: 0;
-  aspect-ratio: 1 / 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  font-size: 13px;
+  aspect-ratio: auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius: 6px;
+  font-size: 11px;
   line-height: 1;
 }
 
 .calendar-empty{
-  aspect-ratio: 1 / 1;
+  min-height: 24px;
+  height: 24px;
 }
 
 .legend{
-  margin-top: 8px;
+  margin-top: 6px;
+  gap: 8px;
   justify-content: center;
-  gap: 10px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
-/* ===== Athlete avatar in list ===== */
+.legend .dot{
+  width: 8px;
+  height: 8px;
+}
+
+/* ===== Avatar next to athlete name ===== */
 .athlete-head{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 4px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:6px;
 }
-
 .athlete-avatar{
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  width:32px;
+  height:32px;
+  flex:0 0 32px;
+  border-radius:999px;
+  border:1px solid var(--border);
   background: rgba(37,99,235,0.12);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  flex: 0 0 34px;
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:14px;
 }
-
-.athlete-meta{
-  min-width: 0;
-}
-
-.athlete-name{
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.athlete-sub{
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.2;
-  margin-top: 2px;
-}
+.athlete-meta{ min-width:0; }
+.athlete-name{ font-weight:800; line-height:1.2; }
+.athlete-sub{ color:var(--muted); font-size:12px; line-height:1.2; }
 
 @media (max-width: 640px){
   #view-calendar .card:first-child{
-    max-width: 100%;
+    max-width: 320px;
+    padding: 8px;
   }
-
   .calendar-weekdays div{
-    min-height: 18px;
-    font-size: 10px;
+    font-size: 8px;
+    height: 14px;
   }
-
-  .calendar-day{
-    min-height: 28px;
-    font-size: 12px;
+  .calendar-day,
+  .calendar-empty{
+    min-height: 20px;
+    height: 20px;
+    font-size: 10px;
   }
 }
