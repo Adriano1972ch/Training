@@ -247,13 +247,6 @@ function updateMiniAvatar(url){
   }
 }
 
-function avatarHtml(url, name){
-  const safeName = String(name || "").trim();
-  const initial = safeName ? safeName.charAt(0).toUpperCase() : "👤";
-  const style = url ? ` style="background-image:url('${withCacheBust(url)}')"` : "";
-  return `<div class="athlete-avatar"${style}>${url ? "" : initial}</div>`;
-}
-
 function withCacheBust(url){
   if (!url) return url;
   const ts = localStorage.getItem(avatarKey("ts")) || String(Date.now());
@@ -379,48 +372,33 @@ let selectedCompareUser2 = "__all__";
 
 // ✅ editing mode (modifica)
 let editingId = null;
+let hiddenPeopleDetails = "";
 
 
 const DEFAULT_COACHES = ["Coach principale", "Preparatore", "Fisioterapista"];
 const DEFAULT_TRAINING_TYPES = ["Allenamento", "Cardio", "Forza", "Mobilità", "Tecnica", "Recupero"];
+const COACHES_KEY = "training_app_coaches";
+const TRAINING_TYPES_KEY = "training_app_types";
 
-let sharedCoaches = [...DEFAULT_COACHES];
-let sharedTrainingTypes = [...DEFAULT_TRAINING_TYPES];
-
-function normalizeCatalogItems(items, fallback){
-  const clean = Array.from(new Set((items || []).map(v => String(v || "").trim()).filter(Boolean)))
-    .sort((a,b)=>a.localeCompare(b, 'it'));
-  return clean.length ? clean : [...fallback];
+function getStoredArray(key, fallback){
+  try {
+    const raw = JSON.parse(localStorage.getItem(key) || "null");
+    if (Array.isArray(raw) && raw.length) return Array.from(new Set(raw.map(v => String(v || "").trim()).filter(Boolean)));
+  } catch(_) {}
+  return [...fallback];
 }
-function getCoaches(){ return sharedCoaches; }
-function getTrainingTypes(){ return sharedTrainingTypes; }
+function setStoredArray(key, arr){
+  const clean = Array.from(new Set((arr || []).map(v => String(v || "").trim()).filter(Boolean))).sort((a,b)=>a.localeCompare(b, 'it'));
+  localStorage.setItem(key, JSON.stringify(clean));
+  return clean;
+}
+function getCoaches(){ return getStoredArray(COACHES_KEY, DEFAULT_COACHES); }
+function getTrainingTypes(){ return getStoredArray(TRAINING_TYPES_KEY, DEFAULT_TRAINING_TYPES); }
 function populateSimpleSelect(selectEl, items, placeholder){
   if (!selectEl) return;
   const opts = (items || []).map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${v}</option>`);
   selectEl.innerHTML = placeholder ? `<option value="">${placeholder}</option>` + opts.join('') : opts.join('');
 }
-
-async function loadSharedCatalogs(){
-  const [{ data: coachesData, error: coachesError }, { data: typesData, error: typesError }] = await Promise.all([
-    supabaseClient.from("coach_options").select("name").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true }),
-    supabaseClient.from("training_type_options").select("name").eq("is_active", true).order("sort_order", { ascending: true }).order("name", { ascending: true })
-  ]);
-
-  if (coachesError) {
-    console.warn("coach_options read error", coachesError);
-    sharedCoaches = [...DEFAULT_COACHES];
-  } else {
-    sharedCoaches = normalizeCatalogItems((coachesData || []).map(x => x.name), DEFAULT_COACHES);
-  }
-
-  if (typesError) {
-    console.warn("training_type_options read error", typesError);
-    sharedTrainingTypes = [...DEFAULT_TRAINING_TYPES];
-  } else {
-    sharedTrainingTypes = normalizeCatalogItems((typesData || []).map(x => x.name), DEFAULT_TRAINING_TYPES);
-  }
-}
-
 function refreshAdminLists(){
   if (coachList) coachList.innerHTML = getCoaches().map(name => `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
   if (trainingTypeList) trainingTypeList.innerHTML = getTrainingTypes().map(name => `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
@@ -430,60 +408,33 @@ function refreshFormOptions(){
   const currentCoach = allenatore?.value || "";
   populateSimpleSelect(tipo, getTrainingTypes(), "Seleziona tipo allenamento");
   populateSimpleSelect(allenatore, getCoaches(), "Seleziona allenatore");
-  if (tipo && currentTipo && getTrainingTypes().includes(currentTipo)) tipo.value = currentTipo;
-  if (allenatore && currentCoach && getCoaches().includes(currentCoach)) allenatore.value = currentCoach;
+  if (tipo && currentTipo) tipo.value = currentTipo;
+  if (allenatore && currentCoach) allenatore.value = currentCoach;
 }
-
-async function addCatalogItem(tableName, rawName){
-  const name = String(rawName || "").trim();
-  if (!name) return;
-  const { error } = await supabaseClient.from(tableName).upsert({ name, is_active: true }, { onConflict: "name" });
-  if (error) {
-    console.error(error);
-    alert("Impossibile salvare il valore su Supabase.");
-    return;
-  }
-  await loadSharedCatalogs();
-  refreshAdminLists();
-  refreshFormOptions();
-}
-
-async function removeCatalogItem(tableName, name){
-  const { error } = await supabaseClient.from(tableName).delete().eq("name", name);
-  if (error) {
-    console.error(error);
-    alert("Impossibile rimuovere il valore da Supabase.");
-    return;
-  }
-  await loadSharedCatalogs();
-  refreshAdminLists();
-  refreshFormOptions();
-}
-
-window.removeCoach = async function(encoded){
-  if (!isAdmin) return;
+window.removeCoach = function(encoded){
   const name = decodeURIComponent(encoded);
-  await removeCatalogItem("coach_options", name);
+  setStoredArray(COACHES_KEY, getCoaches().filter(v => v !== name));
+  refreshAdminLists(); refreshFormOptions();
 };
-window.removeTrainingType = async function(encoded){
-  if (!isAdmin) return;
+window.removeTrainingType = function(encoded){
   const name = decodeURIComponent(encoded);
-  await removeCatalogItem("training_type_options", name);
+  setStoredArray(TRAINING_TYPES_KEY, getTrainingTypes().filter(v => v !== name));
+  refreshAdminLists(); refreshFormOptions();
 };
 function bindAdminCatalogActions(){
-  addCoachBtn && (addCoachBtn.onclick = async () => {
-    if (!isAdmin) return;
+  addCoachBtn && (addCoachBtn.onclick = () => {
     const name = (coachNameInput?.value || '').trim();
     if (!name) return;
-    await addCatalogItem("coach_options", name);
+    setStoredArray(COACHES_KEY, [...getCoaches(), name]);
     coachNameInput.value = '';
+    refreshAdminLists(); refreshFormOptions();
   });
-  addTrainingTypeBtn && (addTrainingTypeBtn.onclick = async () => {
-    if (!isAdmin) return;
+  addTrainingTypeBtn && (addTrainingTypeBtn.onclick = () => {
     const name = (trainingTypeInput?.value || '').trim();
     if (!name) return;
-    await addCatalogItem("training_type_options", name);
+    setStoredArray(TRAINING_TYPES_KEY, [...getTrainingTypes(), name]);
     trainingTypeInput.value = '';
+    refreshAdminLists(); refreshFormOptions();
   });
 }
 function getDashboardRange(){
@@ -608,15 +559,11 @@ async function enrichWithProfiles(rows) {
   if (ids.length === 0) return rows || [];
   const { data: profs, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name, avatar_url")
+    .select("id, full_name")
     .in("id", ids);
   if (error) { console.error("Errore lettura profiles:", error); return rows || []; }
-  const map = new Map((profs || []).map(p => [p.id, p]));
-  return (rows || []).map(r => ({
-    ...r,
-    _full_name: map.get(r.user_id)?.full_name || null,
-    _avatar_url: map.get(r.user_id)?.avatar_url || null
-  }));
+  const map = new Map((profs || []).map(p => [p.id, p.full_name]));
+  return (rows || []).map(r => ({ ...r, _full_name: map.get(r.user_id) || null }));
 }
 
 function clearEditingMode() {
@@ -624,6 +571,7 @@ function clearEditingMode() {
   if (submitBtn) submitBtn.textContent = "➕ Aggiungi";
   refreshFormOptions();
   if (persone) persone.value = "";
+  hiddenPeopleDetails = "";
 }
 
 // ================= AUTH UI =================
@@ -734,7 +682,6 @@ isAdmin = await getIsAdmin();
     else { userFilterWrap.style.display = "none"; }
   }
 
-  await loadSharedCatalogs();
   refreshFormOptions();
   bindAdminCatalogActions();
   refreshAdminLists();
@@ -773,7 +720,7 @@ form.onsubmit = async (e) => {
     ora_inizio: ora_inizio.value,
     durata: durata.value || null,
     numero_partecipanti: numero_partecipanti.value || null,
-    persone: [allenatore?.value || "", persone.value || ""].filter(Boolean).join(" | ") || null,
+    persone: [allenatore?.value || "", hiddenPeopleDetails || ""].filter(Boolean).join(" | ") || null,
     note: note.value || null
   };
 
@@ -840,13 +787,10 @@ function renderCalendar() {
   grid.innerHTML = "";
   title.textContent = monthLabel(currentMonth);
 
-  let firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-  firstDay = firstDay === 0 ? 7 : firstDay;
+  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() || 7;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
 
-  for (let i = 1; i < firstDay; i++) {
-    grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
-  }
+  for (let i = 1; i < firstDay; i++) grid.innerHTML += "<div></div>";
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr =
@@ -857,6 +801,7 @@ function renderCalendar() {
     const dayRows = allenamentiMese.filter(a => a.data === dateStr);
     const hasWorkout = dayRows.length > 0;
 
+    // Color coding: usa prima il nome profilo (_full_name = "Inserito da"), con fallback su persone/note
     const namesText = dayRows
       .map(r => `${r._full_name || ""} ${r.persone || ""} ${r.note || ""}`)
       .join(" ")
@@ -873,11 +818,10 @@ function renderCalendar() {
     else if (hasVivienne) colorClass = "workout-vivienne";
 
     grid.innerHTML += `
-      <button class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
-              type="button"
-              onclick="selezionaGiorno('${dateStr}')">
-        <span>${d}</span>
-      </button>`;
+      <div class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
+           onclick="selezionaGiorno('${dateStr}')">
+        ${d}
+      </div>`;
   }
 }
 
@@ -916,24 +860,16 @@ async function caricaAllenamenti(data) {
     const who = (a._full_name || "-");
     const canEdit = isAdmin || (currentUser && a.user_id === currentUser.id);
     const coachName = (a.persone || '-').split(' | ')[0] || '-';
-    const details = (a.persone || '').split(' | ').slice(1).join(' | ') || '-';
 
     listaDiv.innerHTML += `
       <div class="table-row">
-        <div class="athlete-head">
-          ${avatarHtml(a._avatar_url, who)}
-          <div class="athlete-meta">
-            <div class="athlete-name">${who}</div>
-            <div class="athlete-sub">Atleta</div>
-          </div>
-        </div>
         <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
         <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
         <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
         <div>🤝 <strong>Allenatore:</strong> ${coachName}</div>
-        <div>👥 <strong>Dettagli:</strong> ${details}</div>
         <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
         <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
+        ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
         <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
 
         ${canEdit ? `
@@ -990,7 +926,8 @@ window.modificaAllenamento = async function (id) {
   numero_partecipanti.value = data.numero_partecipanti || "";
   const parts = String(data.persone || "").split(" | ");
   if (allenatore) allenatore.value = parts[0] || "";
-  persone.value = parts.slice(1).join(" | ") || "";
+  hiddenPeopleDetails = parts.slice(1).join(" | ") || "";
+  if (persone) persone.value = hiddenPeopleDetails;
   note.value = data.note || "";
 
   // porta l'utente al form del calendario
@@ -1059,6 +996,8 @@ function ensureDefaultCustomDates() {
 function openExportOptions(intent) {
   if (!exportOptions) return false;
   lastExportIntent = intent || null;
+  const monthRadio = exportRangeRadios.find(r => r.value === "month");
+  if (monthRadio) monthRadio.checked = true;
   ensureDefaultCustomDates();
   syncCustomDatesVisibility();
   exportOptions.style.display = "block";
@@ -1072,9 +1011,6 @@ function closeExportOptions() {
 }
 
 function getExportRange() {
-  // se ho cliccato un giorno, esporta quel giorno
-  if (giornoSelezionato) return { fromDate: giornoSelezionato, toDate: giornoSelezionato };
-
   const mode = getSelectedExportMode();
 
   if (mode === "month") {
@@ -1157,7 +1093,7 @@ async function doExportExcel() {
       Tipo: a.tipo || "",
       Durata_min: a.durata ?? "",
       Partecipanti: a.numero_partecipanti ?? "",
-      Trainer: a.persone ?? "",
+      Allenatore: (a.persone || "").split(" | ")[0] || "",
       Inserito_da: isAdmin ? (a._full_name || "-") : "",
       Note: a.note ?? "",
       ID: a.id ?? ""
@@ -1184,18 +1120,8 @@ async function doExportExcel() {
   }
 }
 
-exportExcelBtn?.addEventListener("click", async () => {
-  try {
-    const isHidden = exportOptions ? (getComputedStyle(exportOptions).display === "none") : true;
-    if (!giornoSelezionato && exportOptions && isHidden) {
-      openExportOptions("excel");
-      return;
-    }
-    await doExportExcel();
-  } catch (e) {
-    console.error(e);
-    alert("Errore export Excel");
-  }
+exportExcelBtn?.addEventListener("click", () => {
+  openExportOptions("excel");
 });
 
 // ================= EXPORT PDF =================
@@ -1275,18 +1201,8 @@ async function doExportPdf() {
   }
 }
 
-exportPdfBtn?.addEventListener("click", async () => {
-  try {
-    const isHidden = exportOptions ? (getComputedStyle(exportOptions).display === "none") : true;
-    if (!giornoSelezionato && exportOptions && isHidden) {
-      openExportOptions("pdf");
-      return;
-    }
-    await doExportPdf();
-  } catch (e) {
-    console.error(e);
-    alert("Errore export PDF");
-  }
+exportPdfBtn?.addEventListener("click", () => {
+  openExportOptions("pdf");
 });
 
 /* ================= I18N ================= */
@@ -1575,7 +1491,7 @@ async function renderProfile(){
     if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
-    if (isAdmin) { await loadSharedCatalogs(); refreshAdminLists(); refreshFormOptions(); }
+    if (isAdmin) { refreshAdminLists(); refreshFormOptions(); }
   } catch(_) {
     if (roleEl) roleEl.textContent = "Utente";
   }
