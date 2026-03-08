@@ -247,6 +247,13 @@ function updateMiniAvatar(url){
   }
 }
 
+function avatarHtml(url, name){
+  const safeName = String(name || "").trim();
+  const initial = safeName ? safeName.charAt(0).toUpperCase() : "👤";
+  const style = url ? ` style="background-image:url('${withCacheBust(url)}')"` : "";
+  return `<div class="athlete-avatar"${style}>${url ? "" : initial}</div>`;
+}
+
 function withCacheBust(url){
   if (!url) return url;
   const ts = localStorage.getItem(avatarKey("ts")) || String(Date.now());
@@ -382,12 +389,11 @@ let sharedTrainingTypes = [...DEFAULT_TRAINING_TYPES];
 
 function normalizeCatalogItems(items, fallback){
   const clean = Array.from(new Set((items || []).map(v => String(v || "").trim()).filter(Boolean)))
-    .sort((a,b) => a.localeCompare(b, 'it'));
+    .sort((a,b)=>a.localeCompare(b, 'it'));
   return clean.length ? clean : [...fallback];
 }
 function getCoaches(){ return sharedCoaches; }
 function getTrainingTypes(){ return sharedTrainingTypes; }
-
 function populateSimpleSelect(selectEl, items, placeholder){
   if (!selectEl) return;
   const opts = (items || []).map(v => `<option value="${String(v).replace(/"/g,'&quot;')}">${v}</option>`);
@@ -416,18 +422,9 @@ async function loadSharedCatalogs(){
 }
 
 function refreshAdminLists(){
-  if (coachList) {
-    coachList.innerHTML = getCoaches().map(name =>
-      `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`
-    ).join('');
-  }
-  if (trainingTypeList) {
-    trainingTypeList.innerHTML = getTrainingTypes().map(name =>
-      `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`
-    ).join('');
-  }
+  if (coachList) coachList.innerHTML = getCoaches().map(name => `<span class="chip">${name}<button type="button" onclick="removeCoach('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
+  if (trainingTypeList) trainingTypeList.innerHTML = getTrainingTypes().map(name => `<span class="chip">${name}<button type="button" onclick="removeTrainingType('${encodeURIComponent(name)}')">Rimuovi</button></span>`).join('');
 }
-
 function refreshFormOptions(){
   const currentTipo = tipo?.value || "";
   const currentCoach = allenatore?.value || "";
@@ -440,8 +437,7 @@ function refreshFormOptions(){
 async function addCatalogItem(tableName, rawName){
   const name = String(rawName || "").trim();
   if (!name) return;
-  const payload = { name, is_active: true };
-  const { error } = await supabaseClient.from(tableName).upsert(payload, { onConflict: "name" });
+  const { error } = await supabaseClient.from(tableName).upsert({ name, is_active: true }, { onConflict: "name" });
   if (error) {
     console.error(error);
     alert("Impossibile salvare il valore su Supabase.");
@@ -469,13 +465,11 @@ window.removeCoach = async function(encoded){
   const name = decodeURIComponent(encoded);
   await removeCatalogItem("coach_options", name);
 };
-
 window.removeTrainingType = async function(encoded){
   if (!isAdmin) return;
   const name = decodeURIComponent(encoded);
   await removeCatalogItem("training_type_options", name);
 };
-
 function bindAdminCatalogActions(){
   addCoachBtn && (addCoachBtn.onclick = async () => {
     if (!isAdmin) return;
@@ -484,7 +478,6 @@ function bindAdminCatalogActions(){
     await addCatalogItem("coach_options", name);
     coachNameInput.value = '';
   });
-
   addTrainingTypeBtn && (addTrainingTypeBtn.onclick = async () => {
     if (!isAdmin) return;
     const name = (trainingTypeInput?.value || '').trim();
@@ -615,11 +608,15 @@ async function enrichWithProfiles(rows) {
   if (ids.length === 0) return rows || [];
   const { data: profs, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name")
+    .select("id, full_name, avatar_url")
     .in("id", ids);
   if (error) { console.error("Errore lettura profiles:", error); return rows || []; }
-  const map = new Map((profs || []).map(p => [p.id, p.full_name]));
-  return (rows || []).map(r => ({ ...r, _full_name: map.get(r.user_id) || null }));
+  const map = new Map((profs || []).map(p => [p.id, p]));
+  return (rows || []).map(r => ({
+    ...r,
+    _full_name: map.get(r.user_id)?.full_name || null,
+    _avatar_url: map.get(r.user_id)?.avatar_url || null
+  }));
 }
 
 function clearEditingMode() {
@@ -843,10 +840,13 @@ function renderCalendar() {
   grid.innerHTML = "";
   title.textContent = monthLabel(currentMonth);
 
-  const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() || 7;
+  let firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+  firstDay = firstDay === 0 ? 7 : firstDay;
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
 
-  for (let i = 1; i < firstDay; i++) grid.innerHTML += "<div></div>";
+  for (let i = 1; i < firstDay; i++) {
+    grid.innerHTML += '<div class="calendar-empty" aria-hidden="true"></div>';
+  }
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr =
@@ -857,7 +857,6 @@ function renderCalendar() {
     const dayRows = allenamentiMese.filter(a => a.data === dateStr);
     const hasWorkout = dayRows.length > 0;
 
-    // Color coding: usa prima il nome profilo (_full_name = "Inserito da"), con fallback su persone/note
     const namesText = dayRows
       .map(r => `${r._full_name || ""} ${r.persone || ""} ${r.note || ""}`)
       .join(" ")
@@ -874,10 +873,11 @@ function renderCalendar() {
     else if (hasVivienne) colorClass = "workout-vivienne";
 
     grid.innerHTML += `
-      <div class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
-           onclick="selezionaGiorno('${dateStr}')">
-        ${d}
-      </div>`;
+      <button class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
+              type="button"
+              onclick="selezionaGiorno('${dateStr}')">
+        <span>${d}</span>
+      </button>`;
   }
 }
 
@@ -915,17 +915,25 @@ async function caricaAllenamenti(data) {
   enriched.forEach(a => {
     const who = (a._full_name || "-");
     const canEdit = isAdmin || (currentUser && a.user_id === currentUser.id);
+    const coachName = (a.persone || '-').split(' | ')[0] || '-';
+    const details = (a.persone || '').split(' | ').slice(1).join(' | ') || '-';
 
     listaDiv.innerHTML += `
       <div class="table-row">
+        <div class="athlete-head">
+          ${avatarHtml(a._avatar_url, who)}
+          <div class="athlete-meta">
+            <div class="athlete-name">${who}</div>
+            <div class="athlete-sub">Atleta</div>
+          </div>
+        </div>
         <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
         <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
         <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
-        <div>🤝 <strong>Allenatore:</strong> ${(a.persone || '-').split(' | ')[0] || '-'}</div>
-        <div>👥 <strong>Dettagli:</strong> ${(a.persone || '').split(' | ').slice(1).join(' | ') || '-'}</div>
+        <div>🤝 <strong>Allenatore:</strong> ${coachName}</div>
+        <div>👥 <strong>Dettagli:</strong> ${details}</div>
         <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
         <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
-        ${isAdmin ? `<div>👤 <strong>Inserito da:</strong> ${who}</div>` : ""}
         <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
 
         ${canEdit ? `
