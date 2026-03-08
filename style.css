@@ -1,301 +1,580 @@
-<!doctype html>
-<html lang="it">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Training App</title>
+/* ================= BASE ================= */
+:root{
+  --sophieColor:#2563eb;
+  --vivienneColor:#16a34a;
+  --accent:#2563eb;
+  --danger:#ef4444;
+  --bg:#f6f6f6;
+  --card:#ffffff;
+  --text:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --primary:#2563eb;
+}
 
-  <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#2563eb" />
+body{
+  font-family: 'Inter', Arial, sans-serif;
+  background: var(--bg);
+  padding: 16px;
+  margin: 0;
+  color: var(--text);
+}
 
-  <link rel="stylesheet" href="./style.css" />
-</head>
-<body>
+input, textarea, button, select{
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+}
 
-  <!-- AUTH -->
-  <div id="auth" class="card">
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="brand">Training</div>
-        <div class="whoami">Accedi o registrati</div>
-      </div>
-    </div>
+button{
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  transition: 0.2s;
+}
+button:hover{ opacity: .92; }
 
-    <input id="full_name" type="text" placeholder="Nome completo (opzionale)" autocomplete="name" />
-    <input id="email" type="email" placeholder="Email" autocomplete="email" />
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+.btn-secondary{
+  background: #111827;
+}
+.btn-secondary:hover{ opacity: .9; }
 
-    <div class="row">
-      <button id="loginBtn">Login</button>
-      <button id="registerBtn" class="btn-secondary">Registrati</button>
-    </div>
-  </div>
+h2{ margin: 18px 0 10px; }
+h3{ margin: 14px 0 10px; }
 
-  <!-- APP -->
-  <div id="app" style="display:none;">
-    <div class="topbar">
-      <div class="topbar-left">
-        <div class="brand">Training</div>
-        <div id="whoami" class="whoami"></div>
-      </div>
-      <div class="topbar-right" style="display:flex; gap:10px; align-items:center;">
-        <button id="logoutBtn" class="btn-secondary" style="width:auto; margin:0; padding:10px 14px;">Logout</button>
-      </div>
-    </div>
+/* ================= TOPBAR ================= */
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.brand{
+  font-weight: 800;
+  font-size: 18px;
+}
+.whoami{
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.topbar-left{
+  display:flex;
+  flex-direction:column;
+}
 
-    <div id="userFilterWrap" class="admin-filter" style="display:none;">
-      <label for="userFilter">Atleta attiva</label>
-      <select id="userFilter">
-        <option value="__all__">Tutte</option>
-      </select>
-    </div>
+/* ================= ADMIN FILTER ================= */
+.admin-filter{
+  margin: 10px 0 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: var(--card);
+}
+.admin-filter label{ margin:0; font-weight: 700; }
+.admin-filter select{ max-width: 260px; margin: 0; }
 
-    <div class="views">
+/* ================= VIEWS ================= */
+.views{
+  padding-bottom: 140px; /* space for bottom nav + actions */
+}
+.view-title{
+  margin-top: 8px;
+}
 
-      <!-- DASHBOARD -->
-      <section id="view-dashboard">
-        <h2 class="view-title">Dashboard</h2>
+/* ================= DASHBOARD ================= */
+.cards{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 520px){
+  .cards{ grid-template-columns: 1fr; }
+}
 
-        <div class="card">
-          <label for="dashPeriod"><strong>Periodo</strong></label>
-          <select id="dashPeriod">
-            <option value="thisMonth">Questo mese</option>
-            <option value="lastMonth">Mese scorso</option>
-            <option value="thisYear">Quest'anno</option>
-            <option value="all">Tutto</option>
-            <option value="custom">Intervallo personalizzato</option>
-          </select>
-          <div id="dashCustomRange" class="row" style="display:none; gap:10px;">
-            <input id="dashDateFrom" type="date" />
-            <input id="dashDateTo" type="date" />
-          </div>
-          <div id="dashPeriodLabel" class="whoami" style="margin-bottom:12px;"></div>
+.card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.card.wide{ margin-top: 10px; }
+.card-title{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.card-value{
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+.card-sub{
+  margin-top: 6px;
+  color: var(--muted);
+}
+.dash-actions{
+  display:flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.dash-actions button{
+  flex:1;
+  margin:0;
+}
 
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Sessioni</div>
-              <div id="dashSessions" class="stat-value">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Ore totali</div>
-              <div id="dashHours" class="stat-value">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Media partecipanti</div>
-              <div id="dashAvgParticipants" class="stat-value">0</div>
-            </div>
-          </div>
+/* ================= CALENDAR ================= */
+#calendar{
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+}
+.calendar-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom: 10px;
+  font-size: 18px;
+  font-weight: 800;
+}
+.btn-round{
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  margin: 0;
+  padding: 0;
+}
+.calendar-weekdays, #calendar-grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align:center;
+}
+.calendar-weekdays div{
+  font-size: 12px;
+  font-weight: 800;
+  opacity: .6;
+  padding-bottom: 6px;
+}
+.calendar-day{
+  padding: 12px 0;
+  margin: 2px;
+  border-radius: 10px;
+  cursor:pointer;
+  transition:.2s;
+  user-select:none;
+}
+.calendar-day:hover{ background:#e0e7ff; }
+.calendar-day.has-workout:hover{ filter: brightness(0.97); }
+.calendar-day.has-workout{
+  font-weight: 800;
+}
 
-          <div class="row">
-            <button id="dashGoCalendarBtn">Vai al Calendario</button>
-            <button id="dashGoListBtn" class="btn-secondary">Vai alla Lista</button>
-          </div>
-        </div>
+/* Calendar color coding (match legend dots) */
+.calendar-day.workout-sophie{
+  background: var(--sophieColor); /* Sophie */
+  color:#fff;
+}
+.calendar-day.workout-vivienne{
+  background: var(--vivienneColor); /* Vivienne */
+  color:#fff;
+}
+.calendar-day.workout-both{
+  background: linear-gradient(135deg, var(--sophieColor) 0 50%, var(--vivienneColor) 50% 100%);
+  color:#fff;
+}
+.hint{
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
 
-        <div id="dashboardCompareCard" class="card" style="display:none;">
-          <h3>Confronto atlete</h3>
-          <div class="row" style="gap:10px;">
-            <div style="flex:1;">
-              <label for="compareAthlete1"><strong>Atleta 1</strong></label>
-              <select id="compareAthlete1"></select>
-            </div>
-            <div style="flex:1;">
-              <label for="compareAthlete2"><strong>Atleta 2</strong></label>
-              <select id="compareAthlete2"></select>
-            </div>
-          </div>
-          <div id="compareSummary" class="stats-grid" style="margin-top:10px;"></div>
-        </div>
+/* ================= FORM ================= */
+.form{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+.field label{
+  font-size: .95rem;
+  font-weight: 700;
+  color: #333;
+}
 
-        <div class="card">
-          <h3>Statistiche</h3>
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Sessioni</div>
-              <div id="pStatSessions" class="stat-value">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Ore</div>
-              <div id="pStatHours" class="stat-value">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Media</div>
-              <div id="pStatAvg" class="stat-value">0</div>
-            </div>
-          </div>
-        </div>
+/* ================= LIST ================= */
+#lista{
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+.table-row{
+  background: var(--card);
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+}
+.actions{
+  display:flex;
+  gap: 10px;
+}
+.actions button{
+  flex:1;
+  margin:0;
+}
 
-        <!-- Export shortcuts -->
-        <div class="card">
-          <h3>Export</h3>
-          <div class="row">
-            <button id="exportExcelBtn">Esporta Excel</button>
-            <button id="exportPdfBtn" class="btn-secondary">Esporta PDF</button>
-          </div>
+/* ================= EXPORT MENU ================= */
+.export-menu{
+  margin-top: 12px;
+  display:flex;
+  gap: 10px;
+}
+.export-menu button{
+  flex: 1;
+  margin: 0;
+}
 
-          <div id="exportOptions" style="display:none; margin-top:12px;">
-            <h4>Opzioni export</h4>
+/* ================= BOTTOM NAV ================= */
+.bottom-nav{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,.98);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 8px 10px;
+}
+.nav-item{
+  background: transparent;
+  color: var(--text);
+  border: none;
+  padding: 8px 6px;
+  border-radius: 12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap: 4px;
+  margin: 0;
+}
+.nav-item span{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.nav-item.active{
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.nav-item.active span{
+  color: var(--text);
+}
 
-            <label>
-              <input type="radio" name="exportRange" value="month" checked />
-              Mese
-            </label>
+/* ================= DESKTOP ================= */
+@media (min-width: 1024px){
+  body{ padding: 20px; }
+  .bottom-nav{ max-width: 520px; margin: 0 auto; border-radius: 16px 16px 0 0; }
+}
 
-            <label>
-              <input type="radio" name="exportRange" value="custom" />
-              Intervallo date
-            </label>
 
-            <div id="monthPicker" style="margin-top:10px;">
-              <label for="exportMonth">Seleziona mese</label>
-              <input id="exportMonth" type="month" />
-            </div>
+/* ================= EXPORT OPTIONS ================= */
+#exportOptions{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+}
+#exportOptions h4{ margin: 0 0 10px; }
+#exportOptions label{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+#exportOptions input[type="radio"]{
+  width: auto;
+  margin: 0;
+  padding: 0;
+}
+#customDates{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+#customDates input[type="date"]{
+  width: auto;
+  min-width: 160px;
+  margin: 0;
+}
+#applyExport{
+  width: auto;
+}
+/* ===== Legend (calendar colors) ===== */
+.hint-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-            <div id="customDates" style="margin-top:10px; display:none;">
-              <input id="dateFrom" type="date" />
-              <input id="dateTo" type="date" />
-            </div>
+.legend{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
 
-            <button id="applyExport" style="margin-top:10px;">Applica</button>
-          </div>
-        </div>
-      </section>
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap: 6px;
+  white-space: nowrap;
+}
 
-      <!-- CALENDAR -->
-      <section id="view-calendar" style="display:none;">
-        <h2 class="view-title">Calendario</h2>
+.dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display:inline-block;
+  border: 1px solid rgba(0,0,0,.12);
+}
 
-        <div class="card">
-          <div class="calendar-header">
-            <button id="prevMonth" class="btn-secondary" style="width:auto;">◀</button>
-            <div id="calendarTitle" class="calendar-title">Mese</div>
-            <button id="nextMonth" class="btn-secondary" style="width:auto;">▶</button>
-          </div>
+.dot-sophie{ background: var(--sophieColor); }
+.dot-vivienne{ background: var(--vivienneColor); }
+.dot-both{ background: linear-gradient(135deg, var(--sophieColor) 0 50%, var(--vivienneColor) 50% 100%); }
 
-          <div id="calendar-grid"></div>
-        </div>
+/* ================= PROFILE ================= */
+.profile-head{
+  display:flex;
+  gap: 12px;
+  align-items:center;
+}
+.profile-meta{ flex: 1; min-width: 0; }
+.profile-head-actions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.small-btn{
+  width: auto;
+  padding: 10px 12px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+.profile-avatar{
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border: 1px solid var(--border);
+  font-size: 24px;
+  background: rgba(37,99,235,0.10);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  user-select:none;
+  cursor:pointer;
+}
+.profile-avatar.has-photo{ background-color: transparent; }
+.profile-avatar.no-photo{ color: var(--muted); }
 
-        <div class="card">
-          <h3>Aggiungi allenamento</h3>
-          <form id="form">
-            <label>Tipo allenamento</label>
-            <select id="tipo"></select>
+.profile-name{ font-weight: 900; font-size: 18px; }
+.profile-sub{ margin-top: 2px; color: var(--muted); font-size: 13px; }
+.profile-badges{ margin-top: 8px; display:flex; gap: 8px; flex-wrap: wrap; }
 
-            <label>Allenatore</label>
-            <select id="allenatore"></select>
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.65);
+  backdrop-filter: blur(8px);
+  font-weight: 800;
+  font-size: 12px;
+}
+.badge-role{
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
 
-            <label>Data</label>
-            <input id="data" type="date" required />
+.pref-row{
+  display:flex;
+  justify-content:space-between;
+  gap: 12px;
+  align-items:center;
+  padding: 10px 0;
+  border-top: 1px dashed var(--border);
+}
+.pref-label{ font-weight: 800; }
 
-            <label>Ora inizio</label>
-            <input id="ora_inizio" type="time" required />
+.color-palette{
+  display:grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 8px;
+  justify-items: center;
+}
+@media (max-width: 520px){
+  .color-palette{ grid-template-columns: repeat(8, 1fr); }
+}
+.dotpick{
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--c);
+  margin: 0;
+  padding: 0;
+  cursor:pointer;
+}
+.dotpick.active{
+  outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 2px;
+}
 
-            <label>Durata (minuti)</label>
-            <input id="durata" type="number" min="0" step="5" placeholder="Es. 60" />
+.stats-grid{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 520px){
+  .stats-grid{ grid-template-columns: 1fr; }
+}
+.stat{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,0.65);
+}
+.stat-k{ color: var(--muted); font-weight: 800; font-size: 12px; }
+.stat-v{ font-size: 22px; font-weight: 900; margin-top: 6px; }
 
-            <label>Numero partecipanti</label>
-            <input id="numero_partecipanti" type="number" min="0" step="1" placeholder="Es. 10" />
+.btn-danger{ background: var(--danger); }
+.btn-danger:hover{ opacity: .92; }
 
-            <input id="persone" type="hidden" />
 
-            <label>Note</label>
-            <textarea id="note" rows="3" placeholder="Note..."></textarea>
+/* ================= MINI AVATAR (top bar) ================= */
+.user-mini{ display:flex; align-items:center; }
+.mini-avatar{
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(37,99,235,0.12);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size: 14px;
+  user-select:none;
+}
+.mini-avatar.has-photo{ background-color: transparent; }
 
-            <button type="submit">Salva</button>
-          </form>
-        </div>
-      </section>
 
-      <!-- LIST -->
-      <section id="view-list" style="display:none;">
-        <h2 id="lista-title" class="view-title">Lista</h2>
-        <div id="lista" class="card">
-          <p class="muted">Seleziona un giorno dal calendario per vedere la lista.</p>
-        </div>
-      </section>
+.row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.row > *{
+  flex:1;
+}
+.stats-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap:10px;
+  margin:12px 0;
+}
+.stat-card{
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+.stat-label{
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.stat-value{
+  font-size: 28px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+.muted{ color: var(--muted); }
+.admin-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap:16px;
+}
+.chip-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:10px;
+}
+.chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  background:#eef2ff;
+  border:1px solid #c7d2fe;
+  border-radius:999px;
+  font-size:14px;
+}
+.chip button{
+  width:auto;
+  margin:0;
+  padding:4px 8px;
+  font-size:12px;
+}
+.compare-card{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:12px;
+}
+@media (max-width: 640px){
+  .row{ flex-direction:column; align-items:stretch; }
+}
 
-      <!-- PROFILE -->
-      <section id="view-profile" style="display:none;">
-        <h2 class="view-title">Profilo</h2>
 
-        <div class="card">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <img id="profileAvatar" src="" alt="Avatar" style="width:64px; height:64px; border-radius:999px; object-fit:cover; background:#e5e7eb;" />
-            <div>
-              <div id="profileName" style="font-weight:800;"></div>
-              <div id="profileEmail" class="whoami"></div>
-              <div id="profileRole" class="whoami"></div>
-            </div>
-            <div style="margin-left:auto;">
-              <img id="miniAvatar" src="" alt="" style="width:36px; height:36px; border-radius:999px; object-fit:cover; background:#e5e7eb;" />
-            </div>
-          </div>
-
-          <hr style="border:none; border-top:1px solid var(--border); margin:14px 0;" />
-
-          <label><strong>Cambia avatar</strong></label>
-          <input id="avatarInput" type="file" accept="image/*" />
-          <button id="changeAvatarBtn" type="button" class="btn-secondary">Aggiorna avatar</button>
-
-          <div style="height:10px;"></div>
-
-          <label><strong>Colore profilo</strong></label>
-          <div id="colorPalette" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
-
-          <div style="height:10px;"></div>
-          <button id="logoutBtn2" type="button" class="btn-secondary">Logout</button>
-        </div>
-
-        <div id="adminPanel" class="card" style="display:none;">
-          <h3>Admin</h3>
-          <p class="muted">Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.</p>
-
-          <div class="admin-grid">
-            <div>
-              <label><strong>Allenatori</strong></label>
-              <div class="row" style="gap:10px;">
-                <input id="coachNameInput" type="text" placeholder="Nuovo allenatore" />
-                <button id="addCoachBtn" type="button">Aggiungi</button>
-              </div>
-              <div id="coachList" class="chip-list"></div>
-            </div>
-
-            <div>
-              <label><strong>Tipi allenamento</strong></label>
-              <div class="row" style="gap:10px;">
-                <input id="trainingTypeInput" type="text" placeholder="Nuovo tipo allenamento" />
-                <button id="addTrainingTypeBtn" type="button">Aggiungi</button>
-              </div>
-              <div id="trainingTypeList" class="chip-list"></div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-    </div>
-
-    <nav class="bottom-nav">
-      <button class="nav-item active" data-target="view-dashboard" type="button"><span>Home</span></button>
-      <button class="nav-item" data-target="view-calendar" type="button"><span>Calendario</span></button>
-      <button class="nav-item" data-target="view-list" type="button"><span>Lista</span></button>
-      <button class="nav-item" data-target="view-profile" type="button"><span>Profilo</span></button>
-    </nav>
-  </div>
-
-  <!-- Dependencies -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
-  <!-- App -->
-  <script src="./app.js"></script>
-
-  <!-- Service Worker -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
-    }
-  </script>
-
-</body>
-</html>
+/* Export options easier to use */
+#exportOptions{
+  display:none;
+}
+#exportOptions label{
+  cursor:pointer;
+}
+#exportOptions input[type="month"],
+#exportOptions input[type="date"]{
+  width:100%;
+}
