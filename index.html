@@ -209,7 +209,11 @@
 
       <!-- LIST -->
       <section id="view-list" style="display:none;">
-        <h2 id="lista-title" class="view-title">Lista</h2>
+        <div class="list-header">
+          <button id="prevDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno precedente">◀</button>
+          <h2 id="lista-title" class="view-title">Lista</h2>
+          <button id="nextDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno successivo">▶</button>
+        </div>
         <div id="lista" class="card">
           <p class="muted">Seleziona un giorno dal calendario per vedere la lista.</p>
         </div>
