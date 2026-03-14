@@ -362,6 +362,8 @@ const trainingTypeList = document.getElementById("trainingTypeList");
 // List
 const listaDiv = document.getElementById("lista");
 const listaTitle = document.getElementById("lista-title");
+const prevDayBtn = document.getElementById("prevDayBtn");
+const nextDayBtn = document.getElementById("nextDayBtn");
 
 // ================= STATE =================
 let currentMonth = new Date();
@@ -580,6 +582,23 @@ function safeNumber(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
+function shiftIsoDate(dateStr, deltaDays) {
+  if (!dateStr) return null;
+  const base = new Date(dateStr + "T00:00:00");
+  base.setDate(base.getDate() + deltaDays);
+  return isoDate(base);
+}
+function updateListNavigationState() {
+  const hasSelectedDay = Boolean(giornoSelezionato);
+  if (prevDayBtn) prevDayBtn.disabled = !hasSelectedDay;
+  if (nextDayBtn) nextDayBtn.disabled = !hasSelectedDay;
+}
+function vaiAlGiorno(deltaDays) {
+  if (!giornoSelezionato) return;
+  const nuovaData = shiftIsoDate(giornoSelezionato, deltaDays);
+  if (!nuovaData) return;
+  selezionaGiorno(nuovaData);
+}
 
 function showView(id) {
   viewIds.forEach(v => {
@@ -590,6 +609,7 @@ function showView(id) {
   navButtons.forEach(btn => btn.classList.toggle("active", btn.dataset.target === id));
   if (id === "view-profile") { renderProfile(); }
   if (id === "view-list" && giornoSelezionato) caricaAllenamenti(giornoSelezionato);
+  updateListNavigationState();
 }
 
 async function getIsAdmin() {
@@ -653,6 +673,7 @@ document.getElementById("logoutBtn").onclick = async () => {
     initTrainerColors();
 isAdmin = false; selectedUserId = "__all__";
   allenamentiMese = []; giornoSelezionato = null;
+  updateListNavigationState();
   clearEditingMode();
   listaDiv.innerHTML = ""; listaTitle.textContent = tr("list.workouts");
   if (userFilterSelect) userFilterSelect.value = "__all__";
@@ -665,6 +686,8 @@ isAdmin = false; selectedUserId = "__all__";
 navButtons.forEach(btn => btn.addEventListener("click", () => showView(btn.dataset.target)));
 dashGoCalendarBtn?.addEventListener("click", () => showView("view-calendar"));
 dashGoListBtn?.addEventListener("click", () => showView("view-list"));
+prevDayBtn?.addEventListener("click", () => vaiAlGiorno(-1));
+nextDayBtn?.addEventListener("click", () => vaiAlGiorno(1));
 
 
 dashPeriod?.addEventListener("change", () => updateDashboard());
@@ -884,6 +907,7 @@ function renderCalendar() {
 window.selezionaGiorno = function (data) {
   giornoSelezionato = data;
   listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(data) });
+  updateListNavigationState();
   showView("view-list");
   caricaAllenamenti(data);
 };
@@ -902,15 +926,18 @@ async function caricaAllenamenti(data) {
   if (isAdmin && selectedUserId !== "__all__") query = query.eq("user_id", selectedUserId);
 
   const { data: rows, error } = await query;
-  if (error) { console.error(error); listaDiv.innerHTML = "<p>Errore caricamento</p>"; return; }
+  if (error) { console.error(error); listaDiv.innerHTML = "<p>Errore caricamento</p>"; updateListNavigationState(); return; }
 
   const enriched = await enrichWithProfiles(rows || []);
   listaDiv.innerHTML = "";
 
   if (!enriched || enriched.length === 0) {
     listaDiv.innerHTML = "<p>Nessun allenamento</p>";
+    updateListNavigationState();
     return;
   }
+
+  updateListNavigationState();
 
   enriched.forEach(a => {
     const who = (a._full_name || "-");
