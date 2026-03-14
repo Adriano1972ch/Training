@@ -891,6 +891,45 @@ window.selezionaGiorno = function (data) {
 prevMonthBtn.onclick = () => { currentMonth.setMonth(currentMonth.getMonth() - 1); caricaAllenamentiMese(); };
 nextMonthBtn.onclick = () => { currentMonth.setMonth(currentMonth.getMonth() + 1); caricaAllenamentiMese(); };
 
+
+
+function changeDay(offset) {
+  if (!giornoSelezionato) return;
+
+  const d = new Date(giornoSelezionato);
+  d.setDate(d.getDate() + offset);
+
+  const newDate = d.toISOString().slice(0, 10);
+  giornoSelezionato = newDate;
+
+  const monthChanged =
+    d.getMonth() !== currentMonth.getMonth() ||
+    d.getFullYear() !== currentMonth.getFullYear();
+
+  if (monthChanged) {
+    currentMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderCalendar();
+    caricaAllenamentiMese();
+  }
+
+  if (listaTitle) {
+    try {
+      listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(newDate) });
+    } catch (e) {
+      listaTitle.textContent = "Lista - " + formatDate(newDate);
+    }
+  }
+
+  caricaAllenamenti(newDate);
+}
+
+if (prevDayBtn) {
+  prevDayBtn.addEventListener("click", () => changeDay(-1));
+}
+if (nextDayBtn) {
+  nextDayBtn.addEventListener("click", () => changeDay(1));
+}
+
 // ================= LIST + EDIT/DELETE =================
 async function caricaAllenamenti(data) {
   let query = supabaseClient
@@ -1309,7 +1348,6 @@ const I18N = {
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendario",
     "nav.list": "Lista",
-    "nav.profile": "Profilo",
     "dash.sessionsMonth": "Sessioni mese",
     "dash.totalHours": "Ore totali",
     "dash.avgParticipants": "Partecipanti medi",
@@ -1364,7 +1402,6 @@ const I18N = {
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendar",
     "nav.list": "List",
-    "nav.profile": "Profile",
     "dash.sessionsMonth": "Sessions this month",
     "dash.totalHours": "Total hours",
     "dash.avgParticipants": "Average participants",
@@ -1419,7 +1456,6 @@ const I18N = {
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Kalender",
     "nav.list": "Liste",
-    "nav.profile": "Profil",
     "dash.sessionsMonth": "Sitzungen im Monat",
     "dash.totalHours": "Gesamtstunden",
     "dash.avgParticipants": "Ø Teilnehmer",
@@ -1526,7 +1562,7 @@ function detectLanguage() {
   return FALLBACK_LANG;
 }
 
-let currentLang = localStorage.getItem("app_lang") || detectLanguage();
+const currentLang = detectLanguage();
 function tr(key, vars = {}) {
   const dict = I18N[currentLang] || I18N[FALLBACK_LANG];
   let s = dict[key] || (I18N[FALLBACK_LANG] && I18N[FALLBACK_LANG][key]) || key;
@@ -1537,94 +1573,21 @@ function tr(key, vars = {}) {
 function applyTranslations() {
   document.documentElement.lang = currentLang;
 
-  const setText = (selector, value) => {
-    const el = document.querySelector(selector);
-    if (el) el.textContent = value;
-  };
-
-  const setPlaceholder = (el, value) => {
-    if (el) el.placeholder = value;
-  };
-
-  // Generic data-i18n support if present
+  // text nodes
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = tr(key);
   });
+
+  // placeholders
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
     if (key) el.setAttribute("placeholder", tr(key));
   });
 
-  document.title = tr("app.title");
-
-  // Auth area
-  const authWhoami = document.querySelector("#auth .whoami");
-  if (authWhoami) {
-    authWhoami.textContent =
-      currentLang === "it" ? "Accedi o registrati" :
-      currentLang === "de" ? "Anmelden oder registrieren" :
-      "Log in or register";
-  }
-
-  setPlaceholder(fullNameInput,
-    currentLang === "it" ? "Nome completo (opzionale)" :
-    currentLang === "de" ? "Vollständiger Name (optional)" :
-    "Full name (optional)"
-  );
-  setPlaceholder(emailInput, currentLang === "de" ? "E-Mail" : "Email");
-  setPlaceholder(passwordInput,
-    currentLang === "it" ? "Password" :
-    currentLang === "de" ? "Passwort" :
-    "Password"
-  );
-
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const logoutBtn2 = document.getElementById("logoutBtn2");
-
-  if (loginBtn) loginBtn.textContent = tr("auth.loginBtn");
-  if (registerBtn) registerBtn.textContent = tr("auth.registerBtn");
-  if (logoutBtn) logoutBtn.textContent = tr("auth.logoutBtn");
-  if (logoutBtn2) logoutBtn2.textContent = tr("auth.logoutBtn");
-
-  // Bottom navigation
-  setText('.nav-item[data-target="view-dashboard"] span', tr("nav.dashboard"));
-  setText('.nav-item[data-target="view-calendar"] span', tr("nav.calendar"));
-  setText('.nav-item[data-target="view-list"] span', tr("nav.list"));
-  setText('.nav-item[data-target="view-profile"] span', tr("nav.profile"));
-
-  // Main titles
-  setText("#view-dashboard > h2.view-title", tr("nav.dashboard"));
-  setText("#view-calendar > h2.view-title", tr("nav.calendar"));
-  setText("#view-profile > h2.view-title", tr("nav.profile"));
-
-  // List title and empty state
-  if (listaTitle) {
-    if (giornoSelezionato) {
-      listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(giornoSelezionato) });
-    } else {
-      listaTitle.textContent = tr("nav.list");
-    }
-  }
-
-  const listaEmpty = document.querySelector("#lista .muted");
-  if (listaEmpty && !giornoSelezionato) {
-    listaEmpty.textContent =
-      currentLang === "it" ? "Seleziona un giorno dal calendario per vedere la lista." :
-      currentLang === "de" ? "Wähle einen Tag im Kalender, um die Liste zu sehen." :
-      "Select a day from the calendar to view the list.";
-  }
-
-  // Profile language label
-  const langLabel = document.querySelector('label[for="langSelect"] strong');
-  if (langLabel) {
-    langLabel.textContent =
-      currentLang === "it" ? "Lingua" :
-      currentLang === "de" ? "Sprache" :
-      "Language";
-  }
+  // document title
+  const titleEl = document.querySelector("title[data-i18n]");
+  if (titleEl) document.title = tr(titleEl.getAttribute("data-i18n"));
 }
 
 // translate known alerts without rewriting the whole file
@@ -1634,22 +1597,7 @@ window.alert = (msg) => {
   return __nativeAlert(msg);
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  applyTranslations();
-
-  const langSelect = document.getElementById("langSelect");
-  if (langSelect) {
-    langSelect.value = currentLang;
-    langSelect.addEventListener("change", () => {
-      currentLang = langSelect.value;
-      localStorage.setItem("app_lang", currentLang);
-      applyTranslations();
-      if (giornoSelezionato && listaTitle) {
-        listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(giornoSelezionato) });
-      }
-    });
-  }
-});
+document.addEventListener("DOMContentLoaded", applyTranslations);
 
 
 
