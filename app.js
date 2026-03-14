@@ -1624,3 +1624,27 @@ async function renderProfile(){
   const lb2 = document.getElementById("logoutBtn2");
   if (lb2) lb2.onclick = () => document.getElementById("logoutBtn")?.click();
 }
+
+// ===== Language selector =====
+const langSelect = document.getElementById("langSelect");
+
+function setLanguage(lang){
+  if(typeof currentLang !== "undefined"){
+    currentLang = lang;
+  }
+  localStorage.setItem("app_lang", lang);
+  if(typeof applyTranslations === "function"){
+    applyTranslations();
+  }
+}
+
+if(langSelect){
+  const savedLang = localStorage.getItem("app_lang");
+  if(savedLang){
+    langSelect.value = savedLang;
+  }
+
+  langSelect.addEventListener("change", () => {
+    setLanguage(langSelect.value);
+  });
+}
