@@ -602,3 +602,15 @@ h3{ margin: 14px 0 10px; }
 #exportOptions input[type="date"]{
   width:100%;
 }
+
+
+.profile-setting{
+  margin-top:14px;
+}
+.profile-setting label{
+  display:block;
+  margin-bottom:6px;
+}
+.profile-setting select{
+  max-width:220px;
+}
