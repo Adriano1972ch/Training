@@ -209,11 +209,7 @@
 
       <!-- LIST -->
       <section id="view-list" style="display:none;">
-        <div class="list-header">
-          <button id="prevDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno precedente">◀</button>
-          <h2 id="lista-title" class="view-title">Lista</h2>
-          <button id="nextDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno successivo">▶</button>
-        </div>
+        <h2 id="lista-title" class="view-title">Lista</h2>
         <div id="lista" class="card">
           <p class="muted">Seleziona un giorno dal calendario per vedere la lista.</p>
         </div>
@@ -247,15 +243,14 @@
           <label><strong>Colore profilo</strong></label>
           <div id="colorPalette" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
 
-<div class="profile-setting">
-  <label for="langSelect"><strong>Lingua</strong></label>
-  <select id="langSelect">
-    <option value="it">Italiano</option>
-    <option value="de">Deutsch</option>
-    <option value="en">English</option>
-  </select>
-</div>
-
+        <div class="profile-setting">
+          <label for="langSelect"><strong>Lingua</strong></label>
+          <select id="langSelect">
+            <option value="it">Italiano</option>
+            <option value="de">Deutsch</option>
+            <option value="en">English</option>
+          </select>
+        </div>
 
           <div style="height:10px;"></div>
           <button id="logoutBtn2" type="button" class="btn-secondary">Logout</button>
