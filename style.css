@@ -218,30 +218,6 @@ h3{ margin: 14px 0 10px; }
   color: #333;
 }
 
-
-.list-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-.list-header .view-title{
-  margin: 8px 0;
-  text-align:center;
-  flex:1;
-}
-.list-nav-btn{
-  width:auto;
-  min-width:48px;
-  margin:0;
-  padding:10px 14px;
-  flex:0 0 auto;
-}
-.list-nav-btn:disabled{
-  opacity:.5;
-  cursor:not-allowed;
-}
-
 /* ================= LIST ================= */
 #lista{
   margin-top: 12px;
