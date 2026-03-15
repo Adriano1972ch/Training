@@ -51,74 +51,87 @@ const navButtons = Array.from(document.querySelectorAll(".nav-item"));
 
 
 // ================= PROFILE UI (colors + avatar) =================
-const PROFILE_COLORS = ["#2563eb", "#16a34a", "#0ea5e9", "#14b8a6", "#84cc16", "#f59e0b", "#f97316", "#ef4444", "#e11d48", "#db2777", "#a855f7", "#7c3aed", "#6366f1", "#334155", "#0f172a", "#9ca3af"];
-const DEFAULT_PROFILE_COLOR = "#2563eb";
+const PROFILE_COLORS = ["#1d4ed8", "#2563eb", "#0ea5e9", "#06b6d4", "#14b8a6", "#16a34a", "#22c55e", "#84cc16", "#f59e0b", "#f97316", "#ef4444", "#e11d48", "#db2777", "#a855f7", "#7c3aed", "#6366f1", "#334155", "#475569", "#0f172a", "#9ca3af"];
 
 function normalizeHexColor(value) {
   const hex = String(value || "").trim();
   return /^#([0-9a-fA-F]{6})$/.test(hex) ? hex.toLowerCase() : null;
 }
 
-function hashString(input) {
+function getFallbackCalendarColor(seed) {
+  const palette = PROFILE_COLORS;
   let hash = 0;
-  const str = String(input || "default");
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+  const input = String(seed || "default");
+  for (let i = 0; i < input.length; i++) {
+    hash = ((hash << 5) - hash) + input.charCodeAt(i);
     hash |= 0;
   }
-  return Math.abs(hash);
+  return palette[Math.abs(hash) % palette.length] || DEFAULT_SOPHIE;
 }
 
-function buildFallbackUserColor(seed) {
-  const hue = hashString(seed) % 360;
-  return hslToHex(hue, 72, 48);
+function getRowCalendarColor(row) {
+  const profileColor = normalizeHexColor(row?._trainer_color);
+  if (profileColor) return profileColor;
+
+  const text = String(row?._full_name || row?.persone || row?.note || "").toLowerCase();
+  if (text.includes("vivienne")) return normalizeHexColor(localStorage.getItem("vivienne_color")) || DEFAULT_VIVIENNE;
+  if (text.includes("sophie")) return normalizeHexColor(localStorage.getItem("sophie_color")) || DEFAULT_SOPHIE;
+
+  return getFallbackCalendarColor(row?.user_id || row?._full_name || row?.id);
 }
 
-function hslToHex(h, s, l) {
-  s /= 100;
-  l /= 100;
-  const k = n => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = n => {
-    const color = l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-    return Math.round(255 * color).toString(16).padStart(2, "0");
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
-}
+// init colori trainer (prima del login)
 
-function getUserColorStorageKey(userId) {
-  return `calendar_color_${userId || "guest"}`;
-}
+const LAST_TRAINER_KEY = "last_trainer_slug";
 
-function getCurrentUserIdentitySeed() {
-  return currentUser?.id || currentUser?.email || currentUser?.user_metadata?.full_name || "default";
-}
+// ================= TRAINER COLORS (Option 1) =================
 
-function getLocalUserColor(userId = currentUser?.id) {
-  const saved = normalizeHexColor(localStorage.getItem(getUserColorStorageKey(userId)));
-  return saved || buildFallbackUserColor(userId || getCurrentUserIdentitySeed());
-}
+const DEFAULT_SOPHIE = "#2563eb";
+const DEFAULT_VIVIENNE = "#16a34a";
+// Ogni utente imposta SOLO il proprio colore (Sophie o Vivienne).
+// I colori sono salvati sul dispositivo (localStorage).
 
-function getEffectiveUserColor(profile = {}) {
-  return normalizeHexColor(profile.trainer_color || profile._trainer_color) || buildFallbackUserColor(profile.id || profile.user_id || profile._full_name || "default");
-}
 
-function applyCalendarAccent(color) {
-  const safe = normalizeHexColor(color) || DEFAULT_PROFILE_COLOR;
-  document.documentElement.style.setProperty("--accent", safe);
+function getTrainerSlug(){
+  // 1) se siamo loggati, deduciamo dal nome/email
+  const s = String(currentUser?.user_metadata?.full_name || currentUser?.email || "").toLowerCase();
+  if (s.includes("vivienne")) { localStorage.setItem(LAST_TRAINER_KEY, "vivienne"); return "vivienne"; }
+  if (s.includes("sophie")) { localStorage.setItem(LAST_TRAINER_KEY, "sophie"); return "sophie"; }
+
+  // 2) se non siamo loggati, manteniamo l'ultimo trainer usato
+  const last = localStorage.getItem(LAST_TRAINER_KEY);
+  if (last === "vivienne" || last === "sophie") return last;
+
+  // 3) fallback
+  return "sophie";
 }
 
 function initTrainerColors(){
-  applyCalendarAccent(getLocalUserColor());
+  const sophie = localStorage.getItem("sophie_color") || DEFAULT_SOPHIE;
+  const vivi = localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE;
+
+  document.documentElement.style.setProperty("--sophieColor", sophie);
+  document.documentElement.style.setProperty("--vivienneColor", vivi);
+
+  // accent = colore dell'utente loggato (se già loggato), altrimenti Sophie
+  const slug = getTrainerSlug();
+  const myColor = (slug === "vivienne") ? vivi : sophie;
+  document.documentElement.style.setProperty("--accent", myColor);
 }
 
 function setMyTrainerColor(col, opts = {}){
   const safe = normalizeHexColor(col);
   if (!safe) return;
-  if (currentUser?.id) {
-    localStorage.setItem(getUserColorStorageKey(currentUser.id), safe);
+
+  const slug = getTrainerSlug();
+  if (slug === "vivienne") {
+    localStorage.setItem("vivienne_color", safe);
+    document.documentElement.style.setProperty("--vivienneColor", safe);
+  } else {
+    localStorage.setItem("sophie_color", safe);
+    document.documentElement.style.setProperty("--sophieColor", safe);
   }
-  applyCalendarAccent(safe);
+  document.documentElement.style.setProperty("--accent", safe);
 
   if (opts.persistRemote !== false && currentUser){
     Promise.resolve(saveTrainerColor(safe)).catch((e)=>console.warn("trainer_color update error", e));
@@ -132,11 +145,12 @@ function setMyTrainerColor(col, opts = {}){
 
 function mountColorPalette(){
   const wrap = document.getElementById("colorPalette");
-  const picker = document.getElementById("customColorPicker");
-  const preview = document.getElementById("colorPreview");
   if (!wrap) return;
 
-  const saved = getLocalUserColor();
+  const slug = getTrainerSlug();
+  const saved = (slug === "vivienne")
+    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
+    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE);
 
   wrap.innerHTML = "";
   PROFILE_COLORS.forEach((col) => {
@@ -145,29 +159,17 @@ function mountColorPalette(){
     btn.className = "dotpick";
     btn.dataset.color = col;
     btn.style.setProperty("--c", col);
-    btn.setAttribute("aria-label", tr("profile.selectColor", { color: col }));
+    btn.setAttribute("aria-label", "Colore " + col);
     if (col === saved) btn.classList.add("active");
 
     btn.onclick = () => {
       setMyTrainerColor(col);
-      if (picker) picker.value = col;
-      if (preview) preview.style.background = col;
+      wrap.querySelectorAll(".dotpick").forEach(b => b.classList.toggle("active", b.dataset.color === col));
+      // ricalcola gradiente "both" (solo CSS vars, quindi basta)
     };
 
     wrap.appendChild(btn);
   });
-
-  if (picker) {
-    picker.value = saved;
-    picker.oninput = (e) => {
-      const value = normalizeHexColor(e.target.value);
-      if (!value) return;
-      setMyTrainerColor(value);
-      if (preview) preview.style.background = value;
-    };
-  }
-
-  if (preview) preview.style.background = saved;
 }
 
 async function ensureProfileRow(){
@@ -223,32 +225,30 @@ async function fetchTrainerColor(){
 
 async function saveTrainerColor(col){
   if (!currentUser) return;
-  const safe = normalizeHexColor(col);
-  if (!safe) return;
-  await ensureProfileRow();
-  const payload = {
-    id: currentUser.id,
-    full_name: currentUser.user_metadata?.full_name || null,
-    trainer_color: safe
-  };
   const { error } = await supabaseClient
     .from("profiles")
-    .upsert(payload, { onConflict: "id" });
+    .update({ trainer_color: col })
+    .eq("id", currentUser.id);
   if (error) console.warn("trainer_color update error", error);
 }
 
 async function syncTrainerColorFromProfile(){
   if (!currentUser) return;
 
-  const local = getLocalUserColor(currentUser.id);
+  const slug = getTrainerSlug();
+  const local = normalizeHexColor((slug === "vivienne")
+    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
+    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE));
+
   const remote = normalizeHexColor(await fetchTrainerColor());
 
   if (remote) {
-    localStorage.setItem(getUserColorStorageKey(currentUser.id), remote);
+    if (slug === "vivienne") localStorage.setItem("vivienne_color", remote);
+    else localStorage.setItem("sophie_color", remote);
     setMyTrainerColor(remote, { persistRemote: false });
   } else if (local) {
     await saveTrainerColor(local);
-    applyCalendarAccent(local);
+    setMyTrainerColor(local, { persistRemote: false });
   }
 }
 
@@ -547,57 +547,8 @@ function filterRowsByDashboardRange(rows){
   const { fromDate, toDate } = getDashboardRange();
   return (rows || []).filter(r => r.data >= fromDate && r.data <= toDate);
 }
-function extractCoachName(row = {}) {
-  return String(row?.persone || '').split(' | ')[0]?.trim() || '';
-}
-function buildCoachShareMarkup(rows = []) {
-  const coachCounts = {};
-  rows.forEach((row) => {
-    const coach = extractCoachName(row);
-    if (!coach) return;
-    coachCounts[coach] = (coachCounts[coach] || 0) + 1;
-  });
-  const total = rows.length || 0;
-  const entries = Object.entries(coachCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
-  if (!total || !entries.length) {
-    return `<div class="muted">${tr("compare.noCoachData")}</div>`;
-  }
-
-  return `
-    <div class="compare-coach-share">
-      <div class="muted" style="margin-top:8px; font-weight:700;">${tr("compare.coachShare")}</div>
-      ${entries.map(([coach, count]) => {
-        const pct = Math.round((count / total) * 100);
-        return `<div class="muted">${escapeHtml(coach)}: ${pct}%</div>`;
-      }).join('')}
-    </div>
-  `;
-}
-function getRowCalendarColor(row = {}) {
-  return getEffectiveUserColor(row);
-}
-function buildCalendarDayBackground(rows = []) {
-  const uniqueColors = Array.from(new Set(rows
-    .map(getRowCalendarColor)
-    .map(normalizeHexColor)
-    .filter(Boolean)));
-
-  if (!uniqueColors.length) return "";
-  if (uniqueColors.length === 1) return uniqueColors[0];
-
-  const stops = uniqueColors.map((color, index) => {
-    const start = Math.round((index / uniqueColors.length) * 100);
-    const end = Math.round(((index + 1) / uniqueColors.length) * 100);
-    return `${color} ${start}% ${end}%`;
-  }).join(', ');
-
-  return `linear-gradient(135deg, ${stops})`;
-}
 async function fetchAthletes(){
-  const { data, error } = await supabaseClient.from('profiles').select('id, full_name, trainer_color').order('full_name', { ascending: true });
+  const { data, error } = await supabaseClient.from('profiles').select('id, full_name').order('full_name', { ascending: true });
   if (error) { console.error(error); return []; }
   return data || [];
 }
@@ -617,23 +568,20 @@ async function updateCompareDashboard(){
   await populateCompareSelectors();
   const ids = [compareAthlete1?.value, compareAthlete2?.value].filter(v => v && v !== '__all__');
   if (ids.length < 2) {
-    compareSummary.innerHTML = `<div class="muted">${tr("compare.selectTwo")}</div>`;
+    compareSummary.innerHTML = '<div class="muted">Seleziona due atlete per vedere il confronto.</div>';
     return;
   }
   const { fromDate, toDate } = getDashboardRange();
-  const { data, error } = await supabaseClient.from('allenamenti').select('user_id, durata, numero_partecipanti, persone').in('user_id', ids).gte('data', fromDate).lte('data', toDate);
-  if (error) { compareSummary.innerHTML = `<div class="muted">${tr("compare.error")}</div>`; return; }
+  const { data, error } = await supabaseClient.from('allenamenti').select('user_id, durata, numero_partecipanti').in('user_id', ids).gte('data', fromDate).lte('data', toDate);
+  if (error) { compareSummary.innerHTML = '<div class="muted">Errore nel confronto.</div>'; return; }
   const athletes = await fetchAthletes();
-  const profileMap = new Map(athletes.map(a => [a.id, a]));
+  const nameMap = new Map(athletes.map(a => [a.id, a.full_name || 'Atleta']));
   const cards = ids.map(id => {
     const rows = (data || []).filter(r => r.user_id === id);
     const sessions = rows.length;
     const hours = rows.reduce((s, r) => s + safeNumber(r.durata), 0) / 60;
     const avg = sessions ? rows.reduce((s, r) => s + safeNumber(r.numero_partecipanti), 0) / sessions : 0;
-    const athlete = profileMap.get(id) || {};
-    const athleteName = athlete.full_name || tr("compare.athlete");
-    const athleteColor = normalizeHexColor(athlete.trainer_color) || buildFallbackUserColor(id || athleteName);
-    return `<div class="compare-card"><div class="stat-label" style="display:flex; align-items:center; gap:8px;"><span style="display:inline-block; width:10px; height:10px; border-radius:999px; background:${athleteColor};"></span><span>${escapeHtml(athleteName)}</span></div><div class="stat-value">${sessions}</div><div class="muted">${tr("stats.sessions")}</div><div class="muted">${tr("stats.hours")}: ${hours.toFixed(1)} · ${tr("stats.avgParticipants")}: ${avg.toFixed(1)}</div>${buildCoachShareMarkup(rows)}</div>`;
+    return `<div class="compare-card"><div class="stat-label">${nameMap.get(id) || 'Atleta'}</div><div class="stat-value">${sessions}</div><div class="muted">Sessioni</div><div class="muted">Ore: ${hours.toFixed(1)} · Media partecipanti: ${avg.toFixed(1)}</div></div>`;
   });
   compareSummary.innerHTML = cards.join('');
 }
@@ -657,21 +605,11 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const [y, m, d] = String(dateStr).split("-").map(Number);
-  const dateObj = new Date(y, (m || 1) - 1, d || 1);
-  return new Intl.DateTimeFormat(currentLang, { day: "2-digit", month: "2-digit", year: "numeric" }).format(dateObj);
+  const [y, m, d] = dateStr.split("-");
+  return `${d}.${m}.${y}`;
 }
 function monthLabel(dateObj) {
   return dateObj.toLocaleDateString(currentLang, { month: "long", year: "numeric" });
-}
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 function safeNumber(v) {
   const n = Number(v);
@@ -713,7 +651,7 @@ async function enrichWithProfiles(rows) {
     ...r,
     _full_name: map.get(r.user_id)?.full_name || null,
     _avatar_url: map.get(r.user_id)?.avatar_url || null,
-    _trainer_color: map.get(r.user_id)?.trainer_color || null
+    _trainer_color: normalizeHexColor(map.get(r.user_id)?.trainer_color)
   }));
 }
 
@@ -954,25 +892,26 @@ function renderCalendar() {
 
     const dayRows = allenamentiMese.filter(a => a.data === dateStr);
     const hasWorkout = dayRows.length > 0;
+    const uniqueColors = [...new Set(dayRows.map(getRowCalendarColor).filter(Boolean))];
 
-    const namesText = dayRows
-      .map(r => `${r._full_name || ""} ${r.persone || ""} ${r.note || ""}`)
-      .join(" ")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
+    let inlineStyle = "";
+    if (uniqueColors.length === 1) {
+      inlineStyle = `style="background:${uniqueColors[0]}; border-color:${uniqueColors[0]}; color:#fff;"`;
+    } else if (uniqueColors.length > 1) {
+      const gradient = uniqueColors.join(', ');
+      inlineStyle = `style="background:linear-gradient(135deg, ${gradient}); border:none; color:#fff;"`;
+    }
 
-    const hasSophie = /\bsophie\b/.test(namesText);
-    const hasVivienne = /\bvivienne\b/.test(namesText);
-
-    let colorClass = "";
-    if (hasSophie && hasVivienne) colorClass = "workout-both";
-    else if (hasSophie) colorClass = "workout-sophie";
-    else if (hasVivienne) colorClass = "workout-vivienne";
+    const tooltip = dayRows
+      .map(r => `${r._full_name || 'Atleta'}${r._trainer_color ? ` (${r._trainer_color})` : ''}`)
+      .join(' · ')
+      .replace(/"/g, '&quot;');
 
     grid.innerHTML += `
-      <button class="calendar-day ${hasWorkout ? "has-workout" : ""} ${colorClass}"
+      <button class="calendar-day ${hasWorkout ? "has-workout" : ""}"
               type="button"
+              title="${tooltip}"
+              ${inlineStyle}
               onclick="selezionaGiorno('${dateStr}')">
         <span>${d}</span>
       </button>`;
@@ -1014,7 +953,7 @@ function changeDay(offset) {
     try {
       listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(newDate) });
     } catch (e) {
-      listaTitle.textContent = tr("nav.list") + " - " + formatDate(newDate);
+      listaTitle.textContent = "Lista - " + formatDate(newDate);
     }
   }
 
@@ -1442,29 +1381,14 @@ const I18N = {
     "auth.registerBtn": "Registrati",
     "auth.logoutBtn": "Logout",
     "admin.viewAs": "Visualizza:",
-    "admin.activeAthlete": "Atleta attiva",
     "admin.all": "Tutti",
-    "admin.allFemale": "Tutte",
-    "admin.title": "Admin",
-    "admin.description": "Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.",
-    "admin.coaches": "Allenatori",
-    "admin.trainingTypes": "Tipi allenamento",
-    "admin.newCoachPh": "Nuovo allenatore",
-    "admin.newTrainingTypePh": "Nuovo tipo allenamento",
-    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendario",
     "nav.list": "Lista",
-    "nav.profile": "Profilo",
     "dash.sessionsMonth": "Sessioni mese",
     "dash.totalHours": "Ore totali",
     "dash.avgParticipants": "Partecipanti medi",
     "dash.period": "Periodo",
-    "dash.thisMonth": "Questo mese",
-    "dash.lastMonth": "Mese scorso",
-    "dash.thisYear": "Quest'anno",
-    "dash.all": "Tutto",
-    "dash.customRange": "Intervallo personalizzato",
     "dash.goCalendar": "Vai al calendario",
     "dash.goList": "Vai alla lista",
     "cal.hint": "Tocca un giorno per visualizzare gli allenamenti.",
@@ -1472,38 +1396,22 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Entrambe",
     "list.newWorkout": "Nuovo allenamento",
-    "list.selectDay": "Seleziona un giorno dal calendario per vedere la lista.",
     "list.workouts": "Allenamenti",
     "list.workoutsOf": "Allenamenti del {date}",
-    "form.addWorkout": "Aggiungi allenamento",
-    "form.type": "Tipo allenamento",
-    "form.coach": "Allenatore",
     "form.typePh": "Tipo allenamento",
     "form.date": "Data",
-    "form.startTime": "Ora inizio",
     "form.time": "Ora",
-    "form.duration": "Durata (minuti)",
     "form.durationPh": "Durata (min)",
-    "form.participants": "Numero partecipanti",
     "form.participantsPh": "Partecipanti",
-    "form.people": "Persone / dettagli aggiuntivi",
     "form.withWhomPh": "Trainer / Con chi",
-    "form.notes": "Note",
     "form.notesPh": "Note",
-    "form.durationExample": "Es. 60",
-    "form.participantsExample": "Es. 10",
-    "form.peopleExample": "Es. gruppo, assistenti, note rapide",
-    "form.save": "Salva",
     "form.addBtn": "➕ Aggiungi",
-    "export.sectionTitle": "Export",
     "export.excel": "📊 Esporta Excel",
     "export.pdf": "📄 Esporta PDF",
     "export.title": "Esporta:",
-    "export.options": "Opzioni export",
     "export.month": "Mese",
     "export.monthLabel": "Mese:",
-    "export.custom": "Intervallo date",
-    "export.selectMonth": "Seleziona mese",
+    "export.custom": "Periodo personalizzato",
     "export.from": "Dal:",
     "export.to": "Al:",
     "export.apply": "Applica",
@@ -1514,40 +1422,7 @@ const I18N = {
     "weekday.fri": "V",
     "weekday.sat": "S",
     "weekday.sun": "D",
-    "alerts.workoutUpdated": "Allenamento aggiornato ✅",
-    "compare.title": "Confronto atlete",
-    "compare.athlete1": "Atleta 1",
-    "compare.athlete2": "Atleta 2",
-    "compare.athlete": "Atleta",
-    "compare.selectTwo": "Seleziona due atlete per vedere il confronto.",
-    "compare.error": "Errore nel confronto.",
-    "compare.coachShare": "Percentuale allenatore",
-    "compare.noCoachData": "Nessun allenatore assegnato",
-    "stats.title": "Statistiche",
-    "stats.sessions": "Sessioni",
-    "stats.totalHours": "Ore totali",
-    "stats.avgParticipants": "Media partecipanti",
-    "stats.hours": "Ore",
-    "stats.avg": "Media",
-    "weekday.long.mon": "Lun",
-    "weekday.long.tue": "Mar",
-    "weekday.long.wed": "Mer",
-    "weekday.long.thu": "Gio",
-    "weekday.long.fri": "Ven",
-    "weekday.long.sat": "Sab",
-    "weekday.long.sun": "Dom",
-    "profile.changeAvatar": "Cambia avatar",
-    "profile.updateAvatar": "Aggiorna avatar",
-    "profile.color": "Colore calendario",
-    "profile.colorHint": "Ogni atleta può scegliere il proprio colore per il calendario. Il colore viene salvato automaticamente.",
-    "profile.customColor": "Colore personalizzato",
-    "profile.selectColor": "Seleziona colore {color}",
-    "calendar.legend.personal": "Colori personali salvati",
-    "calendar.legend.mixed": "Più utenti nello stesso giorno",
-    "roles.admin": "admin",
-    "roles.user": "utente",
-    "common.add": "Aggiungi",
-    "common.saveChanges": "Salva modifiche"
+    "alerts.workoutUpdated": "Allenamento aggiornato ✅"
   },
   en: {
     "app.title": "Workouts",
@@ -1560,29 +1435,14 @@ const I18N = {
     "auth.registerBtn": "Register",
     "auth.logoutBtn": "Logout",
     "admin.viewAs": "View:",
-    "admin.activeAthlete": "Active athlete",
     "admin.all": "All",
-    "admin.allFemale": "All",
-    "admin.title": "Admin",
-    "admin.description": "Manage coaches and workout types available in the dropdown menus.",
-    "admin.coaches": "Coaches",
-    "admin.trainingTypes": "Workout types",
-    "admin.newCoachPh": "New coach",
-    "admin.newTrainingTypePh": "New workout type",
-    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendar",
     "nav.list": "List",
-    "nav.profile": "Profile",
     "dash.sessionsMonth": "Sessions this month",
     "dash.totalHours": "Total hours",
     "dash.avgParticipants": "Average participants",
     "dash.period": "Period",
-    "dash.thisMonth": "This month",
-    "dash.lastMonth": "Last month",
-    "dash.thisYear": "This year",
-    "dash.all": "All",
-    "dash.customRange": "Custom range",
     "dash.goCalendar": "Go to calendar",
     "dash.goList": "Go to list",
     "cal.hint": "Tap a day to view workouts.",
@@ -1590,38 +1450,22 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Both",
     "list.newWorkout": "New workout",
-    "list.selectDay": "Select a day from the calendar to view the list.",
     "list.workouts": "Workouts",
     "list.workoutsOf": "Workouts on {date}",
-    "form.addWorkout": "Add workout",
-    "form.type": "Workout type",
-    "form.coach": "Coach",
     "form.typePh": "Workout type",
     "form.date": "Date",
-    "form.startTime": "Start time",
     "form.time": "Time",
-    "form.duration": "Duration (minutes)",
     "form.durationPh": "Duration (min)",
-    "form.participants": "Number of participants",
     "form.participantsPh": "Participants",
-    "form.people": "People / extra details",
     "form.withWhomPh": "Trainer / With whom",
-    "form.notes": "Notes",
     "form.notesPh": "Notes",
-    "form.durationExample": "E.g. 60",
-    "form.participantsExample": "E.g. 10",
-    "form.peopleExample": "E.g. group, assistants, quick notes",
-    "form.save": "Save",
     "form.addBtn": "➕ Add",
-    "export.sectionTitle": "Export",
     "export.excel": "📊 Export Excel",
     "export.pdf": "📄 Export PDF",
     "export.title": "Export:",
-    "export.options": "Export options",
     "export.month": "Month",
     "export.monthLabel": "Month:",
-    "export.custom": "Date range",
-    "export.selectMonth": "Select month",
+    "export.custom": "Custom period",
     "export.from": "From:",
     "export.to": "To:",
     "export.apply": "Apply",
@@ -1632,40 +1476,7 @@ const I18N = {
     "weekday.fri": "F",
     "weekday.sat": "S",
     "weekday.sun": "S",
-    "alerts.workoutUpdated": "Workout updated ✅",
-    "compare.title": "Athlete comparison",
-    "compare.athlete1": "Athlete 1",
-    "compare.athlete2": "Athlete 2",
-    "compare.athlete": "Athlete",
-    "compare.selectTwo": "Select two athletes to view the comparison.",
-    "compare.error": "Comparison error.",
-    "compare.coachShare": "Coach percentage",
-    "compare.noCoachData": "No coach assigned",
-    "stats.title": "Statistics",
-    "stats.sessions": "Sessions",
-    "stats.totalHours": "Total hours",
-    "stats.avgParticipants": "Average participants",
-    "stats.hours": "Hours",
-    "stats.avg": "Average",
-    "weekday.long.mon": "Mon",
-    "weekday.long.tue": "Tue",
-    "weekday.long.wed": "Wed",
-    "weekday.long.thu": "Thu",
-    "weekday.long.fri": "Fri",
-    "weekday.long.sat": "Sat",
-    "weekday.long.sun": "Sun",
-    "profile.changeAvatar": "Change avatar",
-    "profile.updateAvatar": "Update avatar",
-    "profile.color": "Calendar color",
-    "profile.colorHint": "Each athlete can choose a personal calendar color. The choice is saved automatically.",
-    "profile.customColor": "Custom color",
-    "profile.selectColor": "Select color {color}",
-    "calendar.legend.personal": "Saved personal colors",
-    "calendar.legend.mixed": "Multiple users on the same day",
-    "roles.admin": "admin",
-    "roles.user": "user",
-    "common.add": "Add",
-    "common.saveChanges": "Save changes"
+    "alerts.workoutUpdated": "Workout updated ✅"
   },
   de: {
     "app.title": "Training",
@@ -1678,29 +1489,14 @@ const I18N = {
     "auth.registerBtn": "Registrieren",
     "auth.logoutBtn": "Abmelden",
     "admin.viewAs": "Anzeigen:",
-    "admin.activeAthlete": "Aktive Athletin",
     "admin.all": "Alle",
-    "admin.allFemale": "Alle",
-    "admin.title": "Admin",
-    "admin.description": "Verwalte Trainer und Trainingsarten in den Dropdown-Menüs.",
-    "admin.coaches": "Trainer",
-    "admin.trainingTypes": "Trainingsarten",
-    "admin.newCoachPh": "Neuer Trainer",
-    "admin.newTrainingTypePh": "Neue Trainingsart",
-    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Kalender",
     "nav.list": "Liste",
-    "nav.profile": "Profil",
     "dash.sessionsMonth": "Sitzungen im Monat",
     "dash.totalHours": "Gesamtstunden",
     "dash.avgParticipants": "Ø Teilnehmer",
     "dash.period": "Zeitraum",
-    "dash.thisMonth": "Dieser Monat",
-    "dash.lastMonth": "Letzter Monat",
-    "dash.thisYear": "Dieses Jahr",
-    "dash.all": "Alles",
-    "dash.customRange": "Benutzerdefinierter Zeitraum",
     "dash.goCalendar": "Zum Kalender",
     "dash.goList": "Zur Liste",
     "cal.hint": "Tippe auf einen Tag, um Trainings zu sehen.",
@@ -1708,38 +1504,22 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Beide",
     "list.newWorkout": "Neues Training",
-    "list.selectDay": "Wähle einen Tag im Kalender, um die Liste zu sehen.",
     "list.workouts": "Trainings",
     "list.workoutsOf": "Trainings am {date}",
-    "form.addWorkout": "Training hinzufügen",
-    "form.type": "Trainingsart",
-    "form.coach": "Trainer",
     "form.typePh": "Trainingstyp",
     "form.date": "Datum",
-    "form.startTime": "Startzeit",
     "form.time": "Uhrzeit",
-    "form.duration": "Dauer (Minuten)",
     "form.durationPh": "Dauer (Min)",
-    "form.participants": "Anzahl Teilnehmer",
     "form.participantsPh": "Teilnehmer",
-    "form.people": "Personen / zusätzliche Details",
     "form.withWhomPh": "Trainer / Mit wem",
-    "form.notes": "Notizen",
     "form.notesPh": "Notizen",
-    "form.durationExample": "Z. B. 60",
-    "form.participantsExample": "Z. B. 10",
-    "form.peopleExample": "Z. B. Gruppe, Assistenten, kurze Notizen",
-    "form.save": "Speichern",
     "form.addBtn": "➕ Hinzufügen",
-    "export.sectionTitle": "Export",
     "export.excel": "📊 Excel exportieren",
     "export.pdf": "📄 PDF exportieren",
     "export.title": "Export:",
-    "export.options": "Exportoptionen",
     "export.month": "Monat",
     "export.monthLabel": "Monat:",
-    "export.custom": "Datumsbereich",
-    "export.selectMonth": "Monat wählen",
+    "export.custom": "Benutzerdefinierter Zeitraum",
     "export.from": "Von:",
     "export.to": "Bis:",
     "export.apply": "Anwenden",
@@ -1750,40 +1530,7 @@ const I18N = {
     "weekday.fri": "F",
     "weekday.sat": "S",
     "weekday.sun": "S",
-    "alerts.workoutUpdated": "Training aktualisiert ✅",
-    "compare.title": "Athletinnenvergleich",
-    "compare.athlete1": "Athletin 1",
-    "compare.athlete2": "Athletin 2",
-    "compare.athlete": "Athletin",
-    "compare.selectTwo": "Wähle zwei Athletinnen für den Vergleich.",
-    "compare.error": "Fehler beim Vergleich.",
-    "compare.coachShare": "Traineranteil",
-    "compare.noCoachData": "Kein Trainer zugewiesen",
-    "stats.title": "Statistiken",
-    "stats.sessions": "Einheiten",
-    "stats.totalHours": "Gesamtstunden",
-    "stats.avgParticipants": "Ø Teilnehmer",
-    "stats.hours": "Stunden",
-    "stats.avg": "Durchschnitt",
-    "weekday.long.mon": "Mo",
-    "weekday.long.tue": "Di",
-    "weekday.long.wed": "Mi",
-    "weekday.long.thu": "Do",
-    "weekday.long.fri": "Fr",
-    "weekday.long.sat": "Sa",
-    "weekday.long.sun": "So",
-    "profile.changeAvatar": "Avatar ändern",
-    "profile.updateAvatar": "Avatar aktualisieren",
-    "profile.color": "Kalenderfarbe",
-    "profile.colorHint": "Jede Athletin kann eine eigene Kalenderfarbe wählen. Die Auswahl wird automatisch gespeichert.",
-    "profile.customColor": "Benutzerdefinierte Farbe",
-    "profile.selectColor": "Farbe {color} auswählen",
-    "calendar.legend.personal": "Gespeicherte persönliche Farben",
-    "calendar.legend.mixed": "Mehrere Nutzer am selben Tag",
-    "roles.admin": "Admin",
-    "roles.user": "Nutzer",
-    "common.add": "Hinzufügen",
-    "common.saveChanges": "Änderungen speichern"
+    "alerts.workoutUpdated": "Training aktualisiert ✅"
   },
   sk: {
     "app.title": "Tréningy",
@@ -1796,29 +1543,14 @@ const I18N = {
     "auth.registerBtn": "Registrovať sa",
     "auth.logoutBtn": "Odhlásiť sa",
     "admin.viewAs": "Zobraziť:",
-    "admin.activeAthlete": "Aktívna atlétka",
     "admin.all": "Všetci",
-    "admin.allFemale": "Všetky",
-    "admin.title": "Admin",
-    "admin.description": "Spravuj trénerov a typy tréningov dostupné v rozbaľovacích menu.",
-    "admin.coaches": "Tréneri",
-    "admin.trainingTypes": "Typy tréningu",
-    "admin.newCoachPh": "Nový tréner",
-    "admin.newTrainingTypePh": "Nový typ tréningu",
-    "nav.home": "Domov",
     "nav.dashboard": "Prehľad",
     "nav.calendar": "Kalendár",
     "nav.list": "Zoznam",
-    "nav.profile": "Profil",
     "dash.sessionsMonth": "Tréningy tento mesiac",
     "dash.totalHours": "Celkové hodiny",
     "dash.avgParticipants": "Priemer účastníkov",
     "dash.period": "Obdobie",
-    "dash.thisMonth": "Tento mesiac",
-    "dash.lastMonth": "Minulý mesiac",
-    "dash.thisYear": "Tento rok",
-    "dash.all": "Všetko",
-    "dash.customRange": "Vlastný rozsah",
     "dash.goCalendar": "Do kalendára",
     "dash.goList": "Do zoznamu",
     "cal.hint": "Ťukni na deň pre zobrazenie tréningov.",
@@ -1826,38 +1558,22 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Obe",
     "list.newWorkout": "Nový tréning",
-    "list.selectDay": "Vyber deň z kalendára pre zobrazenie zoznamu.",
     "list.workouts": "Tréningy",
     "list.workoutsOf": "Tréningy dňa {date}",
-    "form.addWorkout": "Pridať tréning",
-    "form.type": "Typ tréningu",
-    "form.coach": "Tréner",
     "form.typePh": "Typ tréningu",
     "form.date": "Dátum",
-    "form.startTime": "Čas začiatku",
     "form.time": "Čas",
-    "form.duration": "Trvanie (minúty)",
     "form.durationPh": "Trvanie (min)",
-    "form.participants": "Počet účastníkov",
     "form.participantsPh": "Účastníci",
-    "form.people": "Ľudia / ďalšie detaily",
     "form.withWhomPh": "Tréner / S kým",
-    "form.notes": "Poznámky",
     "form.notesPh": "Poznámky",
-    "form.durationExample": "Napr. 60",
-    "form.participantsExample": "Napr. 10",
-    "form.peopleExample": "Napr. skupina, asistenti, krátke poznámky",
-    "form.save": "Uložiť",
     "form.addBtn": "➕ Pridať",
-    "export.sectionTitle": "Export",
     "export.excel": "📊 Exportovať Excel",
     "export.pdf": "📄 Exportovať PDF",
     "export.title": "Export:",
-    "export.options": "Možnosti exportu",
     "export.month": "Mesiac",
     "export.monthLabel": "Mesiac:",
-    "export.custom": "Rozsah dátumov",
-    "export.selectMonth": "Vybrať mesiac",
+    "export.custom": "Vlastné obdobie",
     "export.from": "Od:",
     "export.to": "Do:",
     "export.apply": "Použiť",
@@ -1868,40 +1584,7 @@ const I18N = {
     "weekday.fri": "P",
     "weekday.sat": "S",
     "weekday.sun": "N",
-    "alerts.workoutUpdated": "Tréning aktualizovaný ✅",
-    "compare.title": "Porovnanie atlétok",
-    "compare.athlete1": "Atlétka 1",
-    "compare.athlete2": "Atlétka 2",
-    "compare.athlete": "Atlétka",
-    "compare.selectTwo": "Vyber dve atlétky pre porovnanie.",
-    "compare.error": "Chyba pri porovnaní.",
-    "compare.coachShare": "Percento trénera",
-    "compare.noCoachData": "Nie je priradený tréner",
-    "stats.title": "Štatistiky",
-    "stats.sessions": "Tréningy",
-    "stats.totalHours": "Celkové hodiny",
-    "stats.avgParticipants": "Priemer účastníkov",
-    "stats.hours": "Hodiny",
-    "stats.avg": "Priemer",
-    "weekday.long.mon": "Po",
-    "weekday.long.tue": "Ut",
-    "weekday.long.wed": "St",
-    "weekday.long.thu": "Št",
-    "weekday.long.fri": "Pi",
-    "weekday.long.sat": "So",
-    "weekday.long.sun": "Ne",
-    "profile.changeAvatar": "Zmeniť avatar",
-    "profile.updateAvatar": "Aktualizovať avatar",
-    "profile.color": "Farba kalendára",
-    "profile.colorHint": "Každá atlétka si môže zvoliť vlastnú farbu kalendára. Voľba sa uloží automaticky.",
-    "profile.customColor": "Vlastná farba",
-    "profile.selectColor": "Vybrať farbu {color}",
-    "calendar.legend.personal": "Uložené osobné farby",
-    "calendar.legend.mixed": "Viac používateľov v ten istý deň",
-    "roles.admin": "admin",
-    "roles.user": "používateľ",
-    "common.add": "Pridať",
-    "common.saveChanges": "Uložiť zmeny"
+    "alerts.workoutUpdated": "Tréning aktualizovaný ✅"
   }
 };
 
@@ -1916,7 +1599,7 @@ function detectLanguage() {
   return FALLBACK_LANG;
 }
 
-let currentLang = detectLanguage();
+const currentLang = detectLanguage();
 function tr(key, vars = {}) {
   const dict = I18N[currentLang] || I18N[FALLBACK_LANG];
   let s = dict[key] || (I18N[FALLBACK_LANG] && I18N[FALLBACK_LANG][key]) || key;
@@ -1927,42 +1610,21 @@ function tr(key, vars = {}) {
 function applyTranslations() {
   document.documentElement.lang = currentLang;
 
+  // text nodes
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = tr(key);
   });
 
+  // placeholders
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
     if (key) el.setAttribute("placeholder", tr(key));
   });
 
+  // document title
   const titleEl = document.querySelector("title[data-i18n]");
   if (titleEl) document.title = tr(titleEl.getAttribute("data-i18n"));
-
-  if (submitBtn) submitBtn.textContent = editingId ? tr("common.saveChanges") : tr("form.save");
-  if (listaTitle && !giornoSelezionato) listaTitle.textContent = tr("nav.list");
-  if (whoami && currentUser) {
-    const display = currentUser.user_metadata?.full_name || currentUser.email || "";
-    whoami.textContent = isAdmin ? `👑 ${display} (${tr("roles.admin")})` : `👤 ${display}`;
-  }
-}
-
-function refreshLanguageFromDevice() {
-  const detected = detectLanguage();
-  if (detected === currentLang) return;
-  currentLang = detected;
-  applyTranslations();
-  try {
-    const calendarTitleEl = document.getElementById("calendarTitle");
-    if (calendarTitleEl) calendarTitleEl.textContent = monthLabel(currentMonth);
-    if (giornoSelezionato) listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(giornoSelezionato) });
-    renderCalendar();
-    updateDashboard();
-    if (document.getElementById("view-profile")?.style.display !== "none") renderProfile();
-  } catch (e) {
-    console.warn("language refresh error", e);
-  }
 }
 
 // translate known alerts without rewriting the whole file
@@ -1972,11 +1634,7 @@ window.alert = (msg) => {
   return __nativeAlert(msg);
 };
 
-document.addEventListener("DOMContentLoaded", () => {
-  applyTranslations();
-  refreshLanguageFromDevice();
-});
-window.addEventListener("languagechange", refreshLanguageFromDevice);
+document.addEventListener("DOMContentLoaded", applyTranslations);
 
 
 
@@ -1990,12 +1648,12 @@ async function renderProfile(){
 
   try {
     const isAdmin = await getIsAdmin();
-    if (roleEl) roleEl.textContent = isAdmin ? tr("roles.admin") : tr("roles.user");
+    if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
     if (isAdmin) { await loadSharedCatalogs(); refreshAdminLists(); refreshFormOptions(); }
   } catch(_) {
-    if (roleEl) roleEl.textContent = tr("roles.user");
+    if (roleEl) roleEl.textContent = "Utente";
   }
 
   // Stats: mirror dashboard
