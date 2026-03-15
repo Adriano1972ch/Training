@@ -172,7 +172,7 @@
             <button id="nextMonth" class="btn-secondary" style="width:auto;">▶</button>
           </div>
 
-          <div class="calendar-weekdays" aria-hidden="true"><div data-i18n="weekday.long.mon">Lun</div><div data-i18n="weekday.long.tue">Mar</div><div data-i18n="weekday.long.wed">Mer</div><div data-i18n="weekday.long.thu">Gio</div><div data-i18n="weekday.long.fri">Ven</div><div data-i18n="weekday.long.sat">Sab</div><div data-i18n="weekday.long.sun">Dom</div></div><div id="calendar-grid"></div><div class="legend" aria-label="Legenda colori calendario"><div class="legend-item"><span class="dot dot-sophie"></span><span data-i18n="people.sophie">Sophie</span></div><div class="legend-item"><span class="dot dot-vivienne"></span><span data-i18n="people.vivienne">Vivienne</span></div><div class="legend-item"><span class="dot dot-both"></span><span data-i18n="people.both">Entrambe</span></div></div>
+          <div class="calendar-weekdays" aria-hidden="true"><div data-i18n="weekday.long.mon">Lun</div><div data-i18n="weekday.long.tue">Mar</div><div data-i18n="weekday.long.wed">Mer</div><div data-i18n="weekday.long.thu">Gio</div><div data-i18n="weekday.long.fri">Ven</div><div data-i18n="weekday.long.sat">Sab</div><div data-i18n="weekday.long.sun">Dom</div></div><div id="calendar-grid"></div><div class="legend" aria-label="Calendar color legend"><div class="legend-item"><span class="dot" style="background:var(--accent);"></span><span data-i18n="calendar.legend.personal">Colori personali salvati</span></div><div class="legend-item"><span class="dot" style="background:linear-gradient(135deg, #2563eb 0 50%, #16a34a 50% 100%);"></span><span data-i18n="calendar.legend.mixed">Più utenti nello stesso giorno</span></div></div>
         </div>
 
         <div class="card">
@@ -244,8 +244,14 @@
 
           <div style="height:10px;"></div>
 
-          <label><strong data-i18n="profile.color">Colore profilo</strong></label>
+          <label><strong data-i18n="profile.color">Colore calendario</strong></label>
+          <p class="muted" data-i18n="profile.colorHint">Ogni atleta può scegliere il proprio colore per il calendario. Il colore viene salvato automaticamente.</p>
           <div id="colorPalette" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+          <div class="row" style="align-items:center; gap:12px; margin-top:10px;">
+            <label for="customColorPicker" style="margin:0;"><strong data-i18n="profile.customColor">Colore personalizzato</strong></label>
+            <input id="customColorPicker" type="color" value="#2563eb" style="width:56px; height:40px; padding:4px; border-radius:10px; border:1px solid var(--border); background:transparent;" />
+            <span id="colorPreview" aria-hidden="true" style="width:28px; height:28px; border-radius:999px; border:2px solid #fff; box-shadow:0 0 0 1px var(--border);"></span>
+          </div>
 
           <div style="height:10px;"></div>
           <button id="logoutBtn2" type="button" class="btn-secondary" data-i18n="auth.logoutBtn">Logout</button>
