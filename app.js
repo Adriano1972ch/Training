@@ -634,16 +634,40 @@ async function updateCompareDashboard(){
     return;
   }
   const { fromDate, toDate } = getDashboardRange();
-  const { data, error } = await supabaseClient.from('allenamenti').select('user_id, durata, numero_partecipanti').in('user_id', ids).gte('data', fromDate).lte('data', toDate);
+  const { data, error } = await supabaseClient
+    .from('allenamenti')
+    .select('user_id, durata, numero_partecipanti, persone')
+    .in('user_id', ids)
+    .gte('data', fromDate)
+    .lte('data', toDate);
   if (error) { compareSummary.innerHTML = '<div class="muted">Errore nel confronto.</div>'; return; }
   const athletes = await fetchAthletes();
-  const nameMap = new Map(athletes.map(a => [a.id, a.full_name || 'Atleta']));
+  const athleteMap = new Map(athletes.map(a => [a.id, a]));
   const cards = ids.map(id => {
     const rows = (data || []).filter(r => r.user_id === id);
+    const athlete = athleteMap.get(id) || {};
+    const athleteName = athlete.full_name || 'Atleta';
+    const athleteColor = athlete.trainer_color || '#888';
     const sessions = rows.length;
     const hours = rows.reduce((s, r) => s + safeNumber(r.durata), 0) / 60;
     const avg = sessions ? rows.reduce((s, r) => s + safeNumber(r.numero_partecipanti), 0) / sessions : 0;
-    return `<div class="compare-card"><div class="stat-label">${nameMap.get(id) || 'Atleta'}</div><div class="stat-value">${sessions}</div><div class="muted">Sessioni</div><div class="muted">Ore: ${hours.toFixed(1)} · Media partecipanti: ${avg.toFixed(1)}</div></div>`;
+    const coachCounts = rows.reduce((acc, row) => {
+      const coachName = ((row.persone || '').split(' | ')[0] || '').trim();
+      if (!coachName) return acc;
+      acc[coachName] = (acc[coachName] || 0) + 1;
+      return acc;
+    }, {});
+    const coachLines = Object.entries(coachCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([coachName, count]) => {
+        const percent = sessions ? Math.round((count / sessions) * 100) : 0;
+        return `<div class="muted"><strong>${coachName}</strong>: ${percent}%</div>`;
+      })
+      .join('');
+    const coachSection = coachLines
+      ? `<div class="compare-coaches" style="margin-top:8px"><div class="muted" style="font-weight:600">Percentuale allenatore</div>${coachLines}</div>`
+      : `<div class="muted" style="margin-top:8px">Percentuale allenatore: nessun dato</div>`;
+    return `<div class="compare-card"><div class="stat-label" style="display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:12px;height:12px;border-radius:999px;background:${athleteColor}"></span>${athleteName}</div><div class="stat-value">${sessions}</div><div class="muted">Sessioni</div><div class="muted">Ore: ${hours.toFixed(1)} · Media partecipanti: ${avg.toFixed(1)}</div>${coachSection}</div>`;
   });
   compareSummary.innerHTML = cards.join('');
 }
