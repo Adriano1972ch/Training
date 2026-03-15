@@ -215,6 +215,105 @@ async function syncTrainerColorFromProfile(){
   }
 }
 
+
+async function saveAthleteColorById(userId, col){
+  const safe = normalizeHexColor(col);
+  if (!userId || !safe) return;
+  const { error } = await supabaseClient
+    .from("profiles")
+    .update({ trainer_color: safe })
+    .eq("id", userId);
+  if (error) console.warn("athlete color update error", error);
+}
+
+async function mountAdminAthleteColorManager(){
+  const panel = document.getElementById("adminAthleteColorManager");
+  const select = document.getElementById("adminAthleteSelect");
+  const palette = document.getElementById("adminAthleteColorPalette");
+  const customInput = document.getElementById("adminAthleteCustomColor");
+  const saveBtn = document.getElementById("adminAthleteSaveColorBtn");
+  const preview = document.getElementById("adminAthleteColorPreview");
+
+  if (!panel || !select || !palette || !customInput || !saveBtn || !preview) return;
+  if (!isAdmin) {
+    panel.style.display = "none";
+    return;
+  }
+
+  panel.style.display = "block";
+  const athletes = await fetchAthletes();
+  const options = ['<option value="">Seleziona atleta</option>']
+    .concat(athletes.map(a => {
+      const name = a.full_name || a.id;
+      const color = normalizeHexColor(a.trainer_color) || getFallbackCalendarColor(a.id);
+      return `<option value="${a.id}" data-color="${color}">${name}</option>`;
+    }));
+  select.innerHTML = options.join('');
+
+  let selectedColor = null;
+
+  const applyPreview = (color) => {
+    const safe = normalizeHexColor(color) || LEGACY_DEFAULT_ACCENT;
+    selectedColor = safe;
+    preview.style.background = safe;
+    customInput.value = safe;
+    palette.querySelectorAll('.dotpick').forEach(b => b.classList.toggle('active', b.dataset.color === safe));
+  };
+
+  palette.innerHTML = "";
+  PROFILE_COLORS.forEach((col) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dotpick";
+    btn.dataset.color = col;
+    btn.style.setProperty("--c", col);
+    btn.setAttribute("aria-label", "Colore atleta " + col);
+    btn.onclick = () => applyPreview(col);
+    palette.appendChild(btn);
+  });
+
+  select.onchange = () => {
+    const opt = select.selectedOptions?.[0];
+    const color = normalizeHexColor(opt?.dataset?.color) || getFallbackCalendarColor(select.value || 'admin');
+    applyPreview(color);
+  };
+
+  customInput.oninput = () => {
+    const safe = normalizeHexColor(customInput.value);
+    if (safe) applyPreview(safe);
+  };
+
+  saveBtn.onclick = async () => {
+    const userId = select.value;
+    const safe = normalizeHexColor(selectedColor || customInput.value);
+    if (!userId || !safe) {
+      alert('Seleziona un atleta e un colore valido.');
+      return;
+    }
+
+    await saveAthleteColorById(userId, safe);
+
+    if (currentUser?.id === userId) {
+      localStorage.setItem(getProfileColorStorageKey(), safe);
+      document.documentElement.style.setProperty("--accent", safe);
+    }
+
+    allenamentiMese = (allenamentiMese || []).map(row => (
+      row?.user_id === userId ? { ...row, _trainer_color: safe } : row
+    ));
+
+    const chosen = select.selectedOptions?.[0];
+    if (chosen) chosen.dataset.color = safe;
+
+    renderCalendar();
+    updateDashboard();
+    if (giornoSelezionato) caricaAllenamenti(giornoSelezionato);
+  };
+
+  const firstColor = normalizeHexColor(select.selectedOptions?.[0]?.dataset?.color) || LEGACY_DEFAULT_ACCENT;
+  applyPreview(firstColor);
+}
+
 async function uploadAvatarToStorage(file){
   const bucket = "avatars";
   const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
@@ -511,7 +610,7 @@ function filterRowsByDashboardRange(rows){
   return (rows || []).filter(r => r.data >= fromDate && r.data <= toDate);
 }
 async function fetchAthletes(){
-  const { data, error } = await supabaseClient.from('profiles').select('id, full_name').order('full_name', { ascending: true });
+  const { data, error } = await supabaseClient.from('profiles').select('id, full_name, trainer_color').order('full_name', { ascending: true });
   if (error) { console.error(error); return []; }
   return data || [];
 }
@@ -1614,7 +1713,7 @@ async function renderProfile(){
     if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
-    if (isAdmin) { await loadSharedCatalogs(); refreshAdminLists(); refreshFormOptions(); }
+    if (isAdmin) { await loadSharedCatalogs(); refreshAdminLists(); refreshFormOptions(); await mountAdminAthleteColorManager(); }
   } catch(_) {
     if (roleEl) roleEl.textContent = "Utente";
   }
