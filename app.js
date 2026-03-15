@@ -570,8 +570,10 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 function formatDate(dateStr) {
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
+  if (!dateStr) return "";
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  const dateObj = new Date(y, (m || 1) - 1, d || 1);
+  return new Intl.DateTimeFormat(currentLang, { day: "2-digit", month: "2-digit", year: "numeric" }).format(dateObj);
 }
 function monthLabel(dateObj) {
   return dateObj.toLocaleDateString(currentLang, { month: "long", year: "numeric" });
@@ -916,7 +918,7 @@ function changeDay(offset) {
     try {
       listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(newDate) });
     } catch (e) {
-      listaTitle.textContent = "Lista - " + formatDate(newDate);
+      listaTitle.textContent = tr("nav.list") + " - " + formatDate(newDate);
     }
   }
 
@@ -1344,14 +1346,29 @@ const I18N = {
     "auth.registerBtn": "Registrati",
     "auth.logoutBtn": "Logout",
     "admin.viewAs": "Visualizza:",
+    "admin.activeAthlete": "Atleta attiva",
     "admin.all": "Tutti",
+    "admin.allFemale": "Tutte",
+    "admin.title": "Admin",
+    "admin.description": "Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.",
+    "admin.coaches": "Allenatori",
+    "admin.trainingTypes": "Tipi allenamento",
+    "admin.newCoachPh": "Nuovo allenatore",
+    "admin.newTrainingTypePh": "Nuovo tipo allenamento",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendario",
     "nav.list": "Lista",
+    "nav.profile": "Profilo",
     "dash.sessionsMonth": "Sessioni mese",
     "dash.totalHours": "Ore totali",
     "dash.avgParticipants": "Partecipanti medi",
     "dash.period": "Periodo",
+    "dash.thisMonth": "Questo mese",
+    "dash.lastMonth": "Mese scorso",
+    "dash.thisYear": "Quest'anno",
+    "dash.all": "Tutto",
+    "dash.customRange": "Intervallo personalizzato",
     "dash.goCalendar": "Vai al calendario",
     "dash.goList": "Vai alla lista",
     "cal.hint": "Tocca un giorno per visualizzare gli allenamenti.",
@@ -1359,22 +1376,38 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Entrambe",
     "list.newWorkout": "Nuovo allenamento",
+    "list.selectDay": "Seleziona un giorno dal calendario per vedere la lista.",
     "list.workouts": "Allenamenti",
     "list.workoutsOf": "Allenamenti del {date}",
+    "form.addWorkout": "Aggiungi allenamento",
+    "form.type": "Tipo allenamento",
+    "form.coach": "Allenatore",
     "form.typePh": "Tipo allenamento",
     "form.date": "Data",
+    "form.startTime": "Ora inizio",
     "form.time": "Ora",
+    "form.duration": "Durata (minuti)",
     "form.durationPh": "Durata (min)",
+    "form.participants": "Numero partecipanti",
     "form.participantsPh": "Partecipanti",
+    "form.people": "Persone / dettagli aggiuntivi",
     "form.withWhomPh": "Trainer / Con chi",
+    "form.notes": "Note",
     "form.notesPh": "Note",
+    "form.durationExample": "Es. 60",
+    "form.participantsExample": "Es. 10",
+    "form.peopleExample": "Es. gruppo, assistenti, note rapide",
+    "form.save": "Salva",
     "form.addBtn": "➕ Aggiungi",
+    "export.sectionTitle": "Export",
     "export.excel": "📊 Esporta Excel",
     "export.pdf": "📄 Esporta PDF",
     "export.title": "Esporta:",
+    "export.options": "Opzioni export",
     "export.month": "Mese",
     "export.monthLabel": "Mese:",
-    "export.custom": "Periodo personalizzato",
+    "export.custom": "Intervallo date",
+    "export.selectMonth": "Seleziona mese",
     "export.from": "Dal:",
     "export.to": "Al:",
     "export.apply": "Applica",
@@ -1385,7 +1418,29 @@ const I18N = {
     "weekday.fri": "V",
     "weekday.sat": "S",
     "weekday.sun": "D",
-    "alerts.workoutUpdated": "Allenamento aggiornato ✅"
+    "alerts.workoutUpdated": "Allenamento aggiornato ✅",
+    "compare.title": "Confronto atlete",
+    "compare.athlete1": "Atleta 1",
+    "compare.athlete2": "Atleta 2",
+    "stats.title": "Statistiche",
+    "stats.sessions": "Sessioni",
+    "stats.totalHours": "Ore totali",
+    "stats.avgParticipants": "Media partecipanti",
+    "stats.hours": "Ore",
+    "stats.avg": "Media",
+    "weekday.long.mon": "Lun",
+    "weekday.long.tue": "Mar",
+    "weekday.long.wed": "Mer",
+    "weekday.long.thu": "Gio",
+    "weekday.long.fri": "Ven",
+    "weekday.long.sat": "Sab",
+    "weekday.long.sun": "Dom",
+    "profile.changeAvatar": "Cambia avatar",
+    "profile.updateAvatar": "Aggiorna avatar",
+    "profile.color": "Colore profilo",
+    "roles.admin": "admin",
+    "common.add": "Aggiungi",
+    "common.saveChanges": "Salva modifiche"
   },
   en: {
     "app.title": "Workouts",
@@ -1398,14 +1453,29 @@ const I18N = {
     "auth.registerBtn": "Register",
     "auth.logoutBtn": "Logout",
     "admin.viewAs": "View:",
+    "admin.activeAthlete": "Active athlete",
     "admin.all": "All",
+    "admin.allFemale": "All",
+    "admin.title": "Admin",
+    "admin.description": "Manage coaches and workout types available in the dropdown menus.",
+    "admin.coaches": "Coaches",
+    "admin.trainingTypes": "Workout types",
+    "admin.newCoachPh": "New coach",
+    "admin.newTrainingTypePh": "New workout type",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendar",
     "nav.list": "List",
+    "nav.profile": "Profile",
     "dash.sessionsMonth": "Sessions this month",
     "dash.totalHours": "Total hours",
     "dash.avgParticipants": "Average participants",
     "dash.period": "Period",
+    "dash.thisMonth": "This month",
+    "dash.lastMonth": "Last month",
+    "dash.thisYear": "This year",
+    "dash.all": "All",
+    "dash.customRange": "Custom range",
     "dash.goCalendar": "Go to calendar",
     "dash.goList": "Go to list",
     "cal.hint": "Tap a day to view workouts.",
@@ -1413,22 +1483,38 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Both",
     "list.newWorkout": "New workout",
+    "list.selectDay": "Select a day from the calendar to view the list.",
     "list.workouts": "Workouts",
     "list.workoutsOf": "Workouts on {date}",
+    "form.addWorkout": "Add workout",
+    "form.type": "Workout type",
+    "form.coach": "Coach",
     "form.typePh": "Workout type",
     "form.date": "Date",
+    "form.startTime": "Start time",
     "form.time": "Time",
+    "form.duration": "Duration (minutes)",
     "form.durationPh": "Duration (min)",
+    "form.participants": "Number of participants",
     "form.participantsPh": "Participants",
+    "form.people": "People / extra details",
     "form.withWhomPh": "Trainer / With whom",
+    "form.notes": "Notes",
     "form.notesPh": "Notes",
+    "form.durationExample": "E.g. 60",
+    "form.participantsExample": "E.g. 10",
+    "form.peopleExample": "E.g. group, assistants, quick notes",
+    "form.save": "Save",
     "form.addBtn": "➕ Add",
+    "export.sectionTitle": "Export",
     "export.excel": "📊 Export Excel",
     "export.pdf": "📄 Export PDF",
     "export.title": "Export:",
+    "export.options": "Export options",
     "export.month": "Month",
     "export.monthLabel": "Month:",
-    "export.custom": "Custom period",
+    "export.custom": "Date range",
+    "export.selectMonth": "Select month",
     "export.from": "From:",
     "export.to": "To:",
     "export.apply": "Apply",
@@ -1439,7 +1525,29 @@ const I18N = {
     "weekday.fri": "F",
     "weekday.sat": "S",
     "weekday.sun": "S",
-    "alerts.workoutUpdated": "Workout updated ✅"
+    "alerts.workoutUpdated": "Workout updated ✅",
+    "compare.title": "Athlete comparison",
+    "compare.athlete1": "Athlete 1",
+    "compare.athlete2": "Athlete 2",
+    "stats.title": "Statistics",
+    "stats.sessions": "Sessions",
+    "stats.totalHours": "Total hours",
+    "stats.avgParticipants": "Average participants",
+    "stats.hours": "Hours",
+    "stats.avg": "Average",
+    "weekday.long.mon": "Mon",
+    "weekday.long.tue": "Tue",
+    "weekday.long.wed": "Wed",
+    "weekday.long.thu": "Thu",
+    "weekday.long.fri": "Fri",
+    "weekday.long.sat": "Sat",
+    "weekday.long.sun": "Sun",
+    "profile.changeAvatar": "Change avatar",
+    "profile.updateAvatar": "Update avatar",
+    "profile.color": "Profile color",
+    "roles.admin": "admin",
+    "common.add": "Add",
+    "common.saveChanges": "Save changes"
   },
   de: {
     "app.title": "Training",
@@ -1452,14 +1560,29 @@ const I18N = {
     "auth.registerBtn": "Registrieren",
     "auth.logoutBtn": "Abmelden",
     "admin.viewAs": "Anzeigen:",
+    "admin.activeAthlete": "Aktive Athletin",
     "admin.all": "Alle",
+    "admin.allFemale": "Alle",
+    "admin.title": "Admin",
+    "admin.description": "Verwalte Trainer und Trainingsarten in den Dropdown-Menüs.",
+    "admin.coaches": "Trainer",
+    "admin.trainingTypes": "Trainingsarten",
+    "admin.newCoachPh": "Neuer Trainer",
+    "admin.newTrainingTypePh": "Neue Trainingsart",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Kalender",
     "nav.list": "Liste",
+    "nav.profile": "Profil",
     "dash.sessionsMonth": "Sitzungen im Monat",
     "dash.totalHours": "Gesamtstunden",
     "dash.avgParticipants": "Ø Teilnehmer",
     "dash.period": "Zeitraum",
+    "dash.thisMonth": "Dieser Monat",
+    "dash.lastMonth": "Letzter Monat",
+    "dash.thisYear": "Dieses Jahr",
+    "dash.all": "Alles",
+    "dash.customRange": "Benutzerdefinierter Zeitraum",
     "dash.goCalendar": "Zum Kalender",
     "dash.goList": "Zur Liste",
     "cal.hint": "Tippe auf einen Tag, um Trainings zu sehen.",
@@ -1467,22 +1590,38 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Beide",
     "list.newWorkout": "Neues Training",
+    "list.selectDay": "Wähle einen Tag im Kalender, um die Liste zu sehen.",
     "list.workouts": "Trainings",
     "list.workoutsOf": "Trainings am {date}",
+    "form.addWorkout": "Training hinzufügen",
+    "form.type": "Trainingsart",
+    "form.coach": "Trainer",
     "form.typePh": "Trainingstyp",
     "form.date": "Datum",
+    "form.startTime": "Startzeit",
     "form.time": "Uhrzeit",
+    "form.duration": "Dauer (Minuten)",
     "form.durationPh": "Dauer (Min)",
+    "form.participants": "Anzahl Teilnehmer",
     "form.participantsPh": "Teilnehmer",
+    "form.people": "Personen / zusätzliche Details",
     "form.withWhomPh": "Trainer / Mit wem",
+    "form.notes": "Notizen",
     "form.notesPh": "Notizen",
+    "form.durationExample": "Z. B. 60",
+    "form.participantsExample": "Z. B. 10",
+    "form.peopleExample": "Z. B. Gruppe, Assistenten, kurze Notizen",
+    "form.save": "Speichern",
     "form.addBtn": "➕ Hinzufügen",
+    "export.sectionTitle": "Export",
     "export.excel": "📊 Excel exportieren",
     "export.pdf": "📄 PDF exportieren",
     "export.title": "Export:",
+    "export.options": "Exportoptionen",
     "export.month": "Monat",
     "export.monthLabel": "Monat:",
-    "export.custom": "Benutzerdefinierter Zeitraum",
+    "export.custom": "Datumsbereich",
+    "export.selectMonth": "Monat wählen",
     "export.from": "Von:",
     "export.to": "Bis:",
     "export.apply": "Anwenden",
@@ -1493,7 +1632,29 @@ const I18N = {
     "weekday.fri": "F",
     "weekday.sat": "S",
     "weekday.sun": "S",
-    "alerts.workoutUpdated": "Training aktualisiert ✅"
+    "alerts.workoutUpdated": "Training aktualisiert ✅",
+    "compare.title": "Athletinnenvergleich",
+    "compare.athlete1": "Athletin 1",
+    "compare.athlete2": "Athletin 2",
+    "stats.title": "Statistiken",
+    "stats.sessions": "Einheiten",
+    "stats.totalHours": "Gesamtstunden",
+    "stats.avgParticipants": "Ø Teilnehmer",
+    "stats.hours": "Stunden",
+    "stats.avg": "Durchschnitt",
+    "weekday.long.mon": "Mo",
+    "weekday.long.tue": "Di",
+    "weekday.long.wed": "Mi",
+    "weekday.long.thu": "Do",
+    "weekday.long.fri": "Fr",
+    "weekday.long.sat": "Sa",
+    "weekday.long.sun": "So",
+    "profile.changeAvatar": "Avatar ändern",
+    "profile.updateAvatar": "Avatar aktualisieren",
+    "profile.color": "Profilfarbe",
+    "roles.admin": "Admin",
+    "common.add": "Hinzufügen",
+    "common.saveChanges": "Änderungen speichern"
   },
   sk: {
     "app.title": "Tréningy",
@@ -1506,14 +1667,29 @@ const I18N = {
     "auth.registerBtn": "Registrovať sa",
     "auth.logoutBtn": "Odhlásiť sa",
     "admin.viewAs": "Zobraziť:",
+    "admin.activeAthlete": "Aktívna atlétka",
     "admin.all": "Všetci",
+    "admin.allFemale": "Všetky",
+    "admin.title": "Admin",
+    "admin.description": "Spravuj trénerov a typy tréningov dostupné v rozbaľovacích menu.",
+    "admin.coaches": "Tréneri",
+    "admin.trainingTypes": "Typy tréningu",
+    "admin.newCoachPh": "Nový tréner",
+    "admin.newTrainingTypePh": "Nový typ tréningu",
+    "nav.home": "Domov",
     "nav.dashboard": "Prehľad",
     "nav.calendar": "Kalendár",
     "nav.list": "Zoznam",
+    "nav.profile": "Profil",
     "dash.sessionsMonth": "Tréningy tento mesiac",
     "dash.totalHours": "Celkové hodiny",
     "dash.avgParticipants": "Priemer účastníkov",
     "dash.period": "Obdobie",
+    "dash.thisMonth": "Tento mesiac",
+    "dash.lastMonth": "Minulý mesiac",
+    "dash.thisYear": "Tento rok",
+    "dash.all": "Všetko",
+    "dash.customRange": "Vlastný rozsah",
     "dash.goCalendar": "Do kalendára",
     "dash.goList": "Do zoznamu",
     "cal.hint": "Ťukni na deň pre zobrazenie tréningov.",
@@ -1521,22 +1697,38 @@ const I18N = {
     "people.vivienne": "Vivienne",
     "people.both": "Obe",
     "list.newWorkout": "Nový tréning",
+    "list.selectDay": "Vyber deň z kalendára pre zobrazenie zoznamu.",
     "list.workouts": "Tréningy",
     "list.workoutsOf": "Tréningy dňa {date}",
+    "form.addWorkout": "Pridať tréning",
+    "form.type": "Typ tréningu",
+    "form.coach": "Tréner",
     "form.typePh": "Typ tréningu",
     "form.date": "Dátum",
+    "form.startTime": "Čas začiatku",
     "form.time": "Čas",
+    "form.duration": "Trvanie (minúty)",
     "form.durationPh": "Trvanie (min)",
+    "form.participants": "Počet účastníkov",
     "form.participantsPh": "Účastníci",
+    "form.people": "Ľudia / ďalšie detaily",
     "form.withWhomPh": "Tréner / S kým",
+    "form.notes": "Poznámky",
     "form.notesPh": "Poznámky",
+    "form.durationExample": "Napr. 60",
+    "form.participantsExample": "Napr. 10",
+    "form.peopleExample": "Napr. skupina, asistenti, krátke poznámky",
+    "form.save": "Uložiť",
     "form.addBtn": "➕ Pridať",
+    "export.sectionTitle": "Export",
     "export.excel": "📊 Exportovať Excel",
     "export.pdf": "📄 Exportovať PDF",
     "export.title": "Export:",
+    "export.options": "Možnosti exportu",
     "export.month": "Mesiac",
     "export.monthLabel": "Mesiac:",
-    "export.custom": "Vlastné obdobie",
+    "export.custom": "Rozsah dátumov",
+    "export.selectMonth": "Vybrať mesiac",
     "export.from": "Od:",
     "export.to": "Do:",
     "export.apply": "Použiť",
@@ -1547,7 +1739,29 @@ const I18N = {
     "weekday.fri": "P",
     "weekday.sat": "S",
     "weekday.sun": "N",
-    "alerts.workoutUpdated": "Tréning aktualizovaný ✅"
+    "alerts.workoutUpdated": "Tréning aktualizovaný ✅",
+    "compare.title": "Porovnanie atlétok",
+    "compare.athlete1": "Atlétka 1",
+    "compare.athlete2": "Atlétka 2",
+    "stats.title": "Štatistiky",
+    "stats.sessions": "Tréningy",
+    "stats.totalHours": "Celkové hodiny",
+    "stats.avgParticipants": "Priemer účastníkov",
+    "stats.hours": "Hodiny",
+    "stats.avg": "Priemer",
+    "weekday.long.mon": "Po",
+    "weekday.long.tue": "Ut",
+    "weekday.long.wed": "St",
+    "weekday.long.thu": "Št",
+    "weekday.long.fri": "Pi",
+    "weekday.long.sat": "So",
+    "weekday.long.sun": "Ne",
+    "profile.changeAvatar": "Zmeniť avatar",
+    "profile.updateAvatar": "Aktualizovať avatar",
+    "profile.color": "Farba profilu",
+    "roles.admin": "admin",
+    "common.add": "Pridať",
+    "common.saveChanges": "Uložiť zmeny"
   }
 };
 
@@ -1562,7 +1776,7 @@ function detectLanguage() {
   return FALLBACK_LANG;
 }
 
-const currentLang = detectLanguage();
+let currentLang = detectLanguage();
 function tr(key, vars = {}) {
   const dict = I18N[currentLang] || I18N[FALLBACK_LANG];
   let s = dict[key] || (I18N[FALLBACK_LANG] && I18N[FALLBACK_LANG][key]) || key;
@@ -1573,21 +1787,42 @@ function tr(key, vars = {}) {
 function applyTranslations() {
   document.documentElement.lang = currentLang;
 
-  // text nodes
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
     if (key) el.textContent = tr(key);
   });
 
-  // placeholders
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
     const key = el.getAttribute("data-i18n-placeholder");
     if (key) el.setAttribute("placeholder", tr(key));
   });
 
-  // document title
   const titleEl = document.querySelector("title[data-i18n]");
   if (titleEl) document.title = tr(titleEl.getAttribute("data-i18n"));
+
+  if (submitBtn) submitBtn.textContent = editingId ? tr("common.saveChanges") : tr("form.save");
+  if (listaTitle && !giornoSelezionato) listaTitle.textContent = tr("nav.list");
+  if (whoami && currentUser) {
+    const display = currentUser.user_metadata?.full_name || currentUser.email || "";
+    whoami.textContent = isAdmin ? `👑 ${display} (${tr("roles.admin")})` : `👤 ${display}`;
+  }
+}
+
+function refreshLanguageFromDevice() {
+  const detected = detectLanguage();
+  if (detected === currentLang) return;
+  currentLang = detected;
+  applyTranslations();
+  try {
+    const calendarTitleEl = document.getElementById("calendarTitle");
+    if (calendarTitleEl) calendarTitleEl.textContent = monthLabel(currentMonth);
+    if (giornoSelezionato) listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(giornoSelezionato) });
+    renderCalendar();
+    updateDashboard();
+    if (document.getElementById("view-profile")?.style.display !== "none") renderProfile();
+  } catch (e) {
+    console.warn("language refresh error", e);
+  }
 }
 
 // translate known alerts without rewriting the whole file
@@ -1597,7 +1832,11 @@ window.alert = (msg) => {
   return __nativeAlert(msg);
 };
 
-document.addEventListener("DOMContentLoaded", applyTranslations);
+document.addEventListener("DOMContentLoaded", () => {
+  applyTranslations();
+  refreshLanguageFromDevice();
+});
+window.addEventListener("languagechange", refreshLanguageFromDevice);
 
 
 
