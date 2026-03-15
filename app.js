@@ -66,56 +66,30 @@ function getFallbackCalendarColor(seed) {
     hash = ((hash << 5) - hash) + input.charCodeAt(i);
     hash |= 0;
   }
-  return palette[Math.abs(hash) % palette.length] || DEFAULT_SOPHIE;
+  return palette[Math.abs(hash) % palette.length] || LEGACY_DEFAULT_ACCENT;
 }
 
 function getRowCalendarColor(row) {
   const profileColor = normalizeHexColor(row?._trainer_color);
   if (profileColor) return profileColor;
-
-  const text = String(row?._full_name || row?.persone || row?.note || "").toLowerCase();
-  if (text.includes("vivienne")) return normalizeHexColor(localStorage.getItem("vivienne_color")) || DEFAULT_VIVIENNE;
-  if (text.includes("sophie")) return normalizeHexColor(localStorage.getItem("sophie_color")) || DEFAULT_SOPHIE;
-
   return getFallbackCalendarColor(row?.user_id || row?._full_name || row?.id);
 }
 
 // init colori trainer (prima del login)
 
-const LAST_TRAINER_KEY = "last_trainer_slug";
+const LEGACY_DEFAULT_ACCENT = "#2563eb";
 
-// ================= TRAINER COLORS (Option 1) =================
+function getProfileColorStorageKey(){
+  const id = currentUser?.id || currentUser?.email || "guest";
+  return `profile_color_${id}`;
+}
 
-const DEFAULT_SOPHIE = "#2563eb";
-const DEFAULT_VIVIENNE = "#16a34a";
-// Ogni utente imposta SOLO il proprio colore (Sophie o Vivienne).
-// I colori sono salvati sul dispositivo (localStorage).
-
-
-function getTrainerSlug(){
-  // 1) se siamo loggati, deduciamo dal nome/email
-  const s = String(currentUser?.user_metadata?.full_name || currentUser?.email || "").toLowerCase();
-  if (s.includes("vivienne")) { localStorage.setItem(LAST_TRAINER_KEY, "vivienne"); return "vivienne"; }
-  if (s.includes("sophie")) { localStorage.setItem(LAST_TRAINER_KEY, "sophie"); return "sophie"; }
-
-  // 2) se non siamo loggati, manteniamo l'ultimo trainer usato
-  const last = localStorage.getItem(LAST_TRAINER_KEY);
-  if (last === "vivienne" || last === "sophie") return last;
-
-  // 3) fallback
-  return "sophie";
+function getStoredProfileColor(){
+  return normalizeHexColor(localStorage.getItem(getProfileColorStorageKey())) || LEGACY_DEFAULT_ACCENT;
 }
 
 function initTrainerColors(){
-  const sophie = localStorage.getItem("sophie_color") || DEFAULT_SOPHIE;
-  const vivi = localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE;
-
-  document.documentElement.style.setProperty("--sophieColor", sophie);
-  document.documentElement.style.setProperty("--vivienneColor", vivi);
-
-  // accent = colore dell'utente loggato (se già loggato), altrimenti Sophie
-  const slug = getTrainerSlug();
-  const myColor = (slug === "vivienne") ? vivi : sophie;
+  const myColor = getStoredProfileColor();
   document.documentElement.style.setProperty("--accent", myColor);
 }
 
@@ -123,14 +97,7 @@ function setMyTrainerColor(col, opts = {}){
   const safe = normalizeHexColor(col);
   if (!safe) return;
 
-  const slug = getTrainerSlug();
-  if (slug === "vivienne") {
-    localStorage.setItem("vivienne_color", safe);
-    document.documentElement.style.setProperty("--vivienneColor", safe);
-  } else {
-    localStorage.setItem("sophie_color", safe);
-    document.documentElement.style.setProperty("--sophieColor", safe);
-  }
+  localStorage.setItem(getProfileColorStorageKey(), safe);
   document.documentElement.style.setProperty("--accent", safe);
 
   if (opts.persistRemote !== false && currentUser){
@@ -138,8 +105,13 @@ function setMyTrainerColor(col, opts = {}){
   }
 
   if (opts.refreshUI !== false) {
+    // aggiorna anche i dati già caricati dell'utente corrente, così il calendario cambia subito
+    allenamentiMese = (allenamentiMese || []).map(row => (
+      row?.user_id === currentUser?.id ? { ...row, _trainer_color: safe } : row
+    ));
     mountColorPalette();
     renderCalendar();
+    updateDashboard();
   }
 }
 
@@ -147,10 +119,7 @@ function mountColorPalette(){
   const wrap = document.getElementById("colorPalette");
   if (!wrap) return;
 
-  const slug = getTrainerSlug();
-  const saved = (slug === "vivienne")
-    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
-    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE);
+  const saved = getStoredProfileColor();
 
   wrap.innerHTML = "";
   PROFILE_COLORS.forEach((col) => {
@@ -165,7 +134,6 @@ function mountColorPalette(){
     btn.onclick = () => {
       setMyTrainerColor(col);
       wrap.querySelectorAll(".dotpick").forEach(b => b.classList.toggle("active", b.dataset.color === col));
-      // ricalcola gradiente "both" (solo CSS vars, quindi basta)
     };
 
     wrap.appendChild(btn);
@@ -235,16 +203,11 @@ async function saveTrainerColor(col){
 async function syncTrainerColorFromProfile(){
   if (!currentUser) return;
 
-  const slug = getTrainerSlug();
-  const local = normalizeHexColor((slug === "vivienne")
-    ? (localStorage.getItem("vivienne_color") || DEFAULT_VIVIENNE)
-    : (localStorage.getItem("sophie_color") || DEFAULT_SOPHIE));
-
+  const local = getStoredProfileColor();
   const remote = normalizeHexColor(await fetchTrainerColor());
 
   if (remote) {
-    if (slug === "vivienne") localStorage.setItem("vivienne_color", remote);
-    else localStorage.setItem("sophie_color", remote);
+    localStorage.setItem(getProfileColorStorageKey(), remote);
     setMyTrainerColor(remote, { persistRemote: false });
   } else if (local) {
     await saveTrainerColor(local);
