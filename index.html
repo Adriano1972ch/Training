@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Training App</title>
+  <title data-i18n="app.title">Training App</title>
 
   <link rel="manifest" href="./manifest.json" />
   <meta name="theme-color" content="#2563eb" />
@@ -16,18 +16,18 @@
   <div id="auth" class="card">
     <div class="topbar">
       <div class="topbar-left">
-        <div class="brand">Training</div>
-        <div class="whoami">Accedi o registrati</div>
+        <div class="brand" data-i18n="app.brand">Training</div>
+        <div class="whoami" data-i18n="auth.title">Accedi o registrati</div>
       </div>
     </div>
 
-    <input id="full_name" type="text" placeholder="Nome completo (opzionale)" autocomplete="name" />
-    <input id="email" type="email" placeholder="Email" autocomplete="email" />
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    <input id="full_name" type="text" data-i18n-placeholder="auth.fullNamePh" placeholder="Nome completo (opzionale)" autocomplete="name" />
+    <input id="email" type="email" data-i18n-placeholder="auth.emailPh" placeholder="Email" autocomplete="email" />
+    <input id="password" type="password" data-i18n-placeholder="auth.passwordPh" placeholder="Password" autocomplete="current-password" />
 
     <div class="row">
-      <button id="loginBtn">Login</button>
-      <button id="registerBtn" class="btn-secondary">Registrati</button>
+      <button id="loginBtn" data-i18n="auth.loginBtn">Login</button>
+      <button id="registerBtn" class="btn-secondary" data-i18n="auth.registerBtn">Registrati</button>
     </div>
   </div>
 
@@ -35,18 +35,18 @@
   <div id="app" style="display:none;">
     <div class="topbar">
       <div class="topbar-left">
-        <div class="brand">Training</div>
+        <div class="brand" data-i18n="app.brand">Training</div>
         <div id="whoami" class="whoami"></div>
       </div>
       <div class="topbar-right" style="display:flex; gap:10px; align-items:center;">
-        <button id="logoutBtn" class="btn-secondary" style="width:auto; margin:0; padding:10px 14px;">Logout</button>
+        <button id="logoutBtn" class="btn-secondary" style="width:auto; margin:0; padding:10px 14px;" data-i18n="auth.logoutBtn">Logout</button>
       </div>
     </div>
 
     <div id="userFilterWrap" class="admin-filter" style="display:none;">
-      <label for="userFilter">Atleta attiva</label>
+      <label for="userFilter" data-i18n="admin.activeAthlete">Atleta attiva</label>
       <select id="userFilter">
-        <option value="__all__">Tutte</option>
+        <option value="__all__" data-i18n="admin.allFemale">Tutte</option>
       </select>
     </div>
 
@@ -54,16 +54,16 @@
 
       <!-- DASHBOARD -->
       <section id="view-dashboard">
-        <h2 class="view-title">Dashboard</h2>
+        <h2 class="view-title" data-i18n="nav.dashboard">Dashboard</h2>
 
         <div class="card">
-          <label for="dashPeriod"><strong>Periodo</strong></label>
+          <label for="dashPeriod"><strong data-i18n="dash.period">Periodo</strong></label>
           <select id="dashPeriod">
-            <option value="thisMonth">Questo mese</option>
-            <option value="lastMonth">Mese scorso</option>
-            <option value="thisYear">Quest'anno</option>
-            <option value="all">Tutto</option>
-            <option value="custom">Intervallo personalizzato</option>
+            <option value="thisMonth" data-i18n="dash.thisMonth">Questo mese</option>
+            <option value="lastMonth" data-i18n="dash.lastMonth">Mese scorso</option>
+            <option value="thisYear" data-i18n="dash.thisYear">Quest'anno</option>
+            <option value="all" data-i18n="dash.all">Tutto</option>
+            <option value="custom" data-i18n="dash.customRange">Intervallo personalizzato</option>
           </select>
           <div id="dashCustomRange" class="row" style="display:none; gap:10px;">
             <input id="dashDateFrom" type="date" />
@@ -73,34 +73,34 @@
 
           <div class="stats-grid">
             <div class="stat-card">
-              <div class="stat-label">Sessioni</div>
+              <div class="stat-label" data-i18n="stats.sessions">Sessioni</div>
               <div id="dashSessions" class="stat-value">0</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Ore totali</div>
+              <div class="stat-label" data-i18n="stats.totalHours">Ore totali</div>
               <div id="dashHours" class="stat-value">0</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Media partecipanti</div>
+              <div class="stat-label" data-i18n="stats.avgParticipants">Media partecipanti</div>
               <div id="dashAvgParticipants" class="stat-value">0</div>
             </div>
           </div>
 
           <div class="row">
-            <button id="dashGoCalendarBtn">Vai al Calendario</button>
-            <button id="dashGoListBtn" class="btn-secondary">Vai alla Lista</button>
+            <button id="dashGoCalendarBtn" data-i18n="dash.goCalendar">Vai al Calendario</button>
+            <button id="dashGoListBtn" class="btn-secondary" data-i18n="dash.goList">Vai alla Lista</button>
           </div>
         </div>
 
         <div id="dashboardCompareCard" class="card" style="display:none;">
-          <h3>Confronto atlete</h3>
+          <h3 data-i18n="compare.title">Confronto atlete</h3>
           <div class="row" style="gap:10px;">
             <div style="flex:1;">
-              <label for="compareAthlete1"><strong>Atleta 1</strong></label>
+              <label for="compareAthlete1"><strong data-i18n="compare.athlete1">Atleta 1</strong></label>
               <select id="compareAthlete1"></select>
             </div>
             <div style="flex:1;">
-              <label for="compareAthlete2"><strong>Atleta 2</strong></label>
+              <label for="compareAthlete2"><strong data-i18n="compare.athlete2">Atleta 2</strong></label>
               <select id="compareAthlete2"></select>
             </div>
           </div>
@@ -108,18 +108,18 @@
         </div>
 
         <div class="card">
-          <h3>Statistiche</h3>
+          <h3 data-i18n="profile.stats">Statistiche</h3>
           <div class="stats-grid">
             <div class="stat-card">
-              <div class="stat-label">Sessioni</div>
+              <div class="stat-label" data-i18n="stats.sessions">Sessioni</div>
               <div id="pStatSessions" class="stat-value">0</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Ore</div>
+              <div class="stat-label" data-i18n="stats.hours">Ore</div>
               <div id="pStatHours" class="stat-value">0</div>
             </div>
             <div class="stat-card">
-              <div class="stat-label">Media</div>
+              <div class="stat-label" data-i18n="stats.average">Media</div>
               <div id="pStatAvg" class="stat-value">0</div>
             </div>
           </div>
@@ -127,27 +127,27 @@
 
         <!-- Export shortcuts -->
         <div class="card">
-          <h3>Export</h3>
+          <h3 data-i18n="export.section">Export</h3>
           <div class="row">
-            <button id="exportExcelBtn">Esporta Excel</button>
-            <button id="exportPdfBtn" class="btn-secondary">Esporta PDF</button>
+            <button id="exportExcelBtn" data-i18n="export.excel">Esporta Excel</button>
+            <button id="exportPdfBtn" class="btn-secondary" data-i18n="export.pdf">Esporta PDF</button>
           </div>
 
           <div id="exportOptions" style="display:none; margin-top:12px;">
-            <h4>Opzioni export</h4>
+            <h4 data-i18n="export.options">Opzioni export</h4>
 
             <label>
               <input type="radio" name="exportRange" value="month" checked />
-              Mese
+              <span data-i18n="export.month">Mese</span>
             </label>
 
             <label>
               <input type="radio" name="exportRange" value="custom" />
-              Intervallo date
+              <span data-i18n="export.custom">Intervallo date</span>
             </label>
 
             <div id="monthPicker" style="margin-top:10px;">
-              <label for="exportMonth">Seleziona mese</label>
+              <label for="exportMonth" data-i18n="export.selectMonth">Seleziona mese</label>
               <input id="exportMonth" type="month" />
             </div>
 
@@ -156,53 +156,53 @@
               <input id="dateTo" type="date" />
             </div>
 
-            <button id="applyExport" style="margin-top:10px;">Applica</button>
+            <button id="applyExport" style="margin-top:10px;" data-i18n="export.apply">Applica</button>
           </div>
         </div>
       </section>
 
       <!-- CALENDAR -->
       <section id="view-calendar" style="display:none;">
-        <h2 class="view-title">Calendario</h2>
+        <h2 class="view-title" data-i18n="nav.calendar">Calendario</h2>
 
         <div class="card">
           <div class="calendar-header">
             <button id="prevMonth" class="btn-secondary" style="width:auto;">◀</button>
-            <div id="calendarTitle" class="calendar-title">Mese</div>
+            <div id="calendarTitle" class="calendar-title" data-i18n="export.month">Mese</div>
             <button id="nextMonth" class="btn-secondary" style="width:auto;">▶</button>
           </div>
 
-          <div class="calendar-weekdays" aria-hidden="true"><div>Lun</div><div>Mar</div><div>Mer</div><div>Gio</div><div>Ven</div><div>Sab</div><div>Dom</div></div><div id="calendar-grid"></div><div class="legend" aria-label="Legenda colori calendario"><div class="legend-item">Il colore del giorno segue il profilo dell'atleta</div></div>
+          <div class="calendar-weekdays" aria-hidden="true"><div data-i18n="weekday.mon">Lun</div><div data-i18n="weekday.tue">Mar</div><div data-i18n="weekday.wed">Mer</div><div data-i18n="weekday.thu">Gio</div><div data-i18n="weekday.fri">Ven</div><div data-i18n="weekday.sat">Sab</div><div data-i18n="weekday.sun">Dom</div></div><div id="calendar-grid"></div><div class="legend" data-i18n-aria-label="calendar.legendAria" aria-label="Legenda colori calendario"><div class="legend-item" data-i18n="calendar.legend">Il colore del giorno segue il profilo dell'atleta</div></div>
         </div>
 
         <div class="card">
-          <h3>Aggiungi allenamento</h3>
+          <h3 id="workoutFormTitle" data-i18n="form.addWorkout">Aggiungi allenamento</h3>
           <form id="form">
-            <label>Tipo allenamento</label>
+            <label data-i18n="form.type">Tipo allenamento</label>
             <select id="tipo"></select>
 
-            <label>Allenatore</label>
+            <label data-i18n="form.coach">Allenatore</label>
             <select id="allenatore"></select>
 
-            <label>Data</label>
+            <label data-i18n="form.date">Data</label>
             <input id="data" type="date" required />
 
-            <label>Ora inizio</label>
+            <label data-i18n="form.startTime">Ora inizio</label>
             <input id="ora_inizio" type="time" required />
 
-            <label>Durata (minuti)</label>
-            <input id="durata" type="number" min="0" step="5" placeholder="Es. 60" />
+            <label data-i18n="form.duration">Durata (minuti)</label>
+            <input id="durata" type="number" min="0" step="5" data-i18n-placeholder="form.durationExample" placeholder="Es. 60" />
 
-            <label>Numero partecipanti</label>
-            <input id="numero_partecipanti" type="number" min="0" step="1" placeholder="Es. 10" />
+            <label data-i18n="form.participants">Numero partecipanti</label>
+            <input id="numero_partecipanti" type="number" min="0" step="1" data-i18n-placeholder="form.participantsExample" placeholder="Es. 10" />
 
-            <label>Persone / dettagli aggiuntivi</label>
-            <input id="persone" type="text" placeholder="Es. gruppo, assistenti, note rapide" />
+            <label data-i18n="form.people">Persone / dettagli aggiuntivi</label>
+            <input id="persone" type="text" data-i18n-placeholder="form.peopleExample" placeholder="Es. gruppo, assistenti, note rapide" />
 
-            <label>Note</label>
-            <textarea id="note" rows="3" placeholder="Note..."></textarea>
+            <label data-i18n="form.notes">Note</label>
+            <textarea id="note" rows="3" data-i18n-placeholder="form.notesPlaceholder" placeholder="Note..."></textarea>
 
-            <button type="submit">Salva</button>
+            <button type="submit" data-i18n="form.save">Salva</button>
           </form>
         </div>
       </section>
@@ -210,22 +210,22 @@
       <!-- LIST -->
       <section id="view-list" style="display:none;">
         <div class="list-header">
-          <button id="prevDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno precedente">◀</button>
-          <h2 id="lista-title" class="view-title">Lista</h2>
-          <button id="nextDayBtn" class="btn-secondary list-nav-btn" type="button" aria-label="Giorno successivo">▶</button>
+          <button id="prevDayBtn" class="btn-secondary list-nav-btn" type="button" data-i18n-aria-label="list.prevDay" aria-label="Giorno precedente">◀</button>
+          <h2 id="lista-title" class="view-title" data-i18n="nav.list">Lista</h2>
+          <button id="nextDayBtn" class="btn-secondary list-nav-btn" type="button" data-i18n-aria-label="list.nextDay" aria-label="Giorno successivo">▶</button>
         </div>
         <div id="lista" class="card">
-          <p class="muted">Seleziona un giorno dal calendario per vedere la lista.</p>
+          <p class="muted" data-i18n="list.selectDay">Seleziona un giorno dal calendario per vedere la lista.</p>
         </div>
       </section>
 
       <!-- PROFILE -->
       <section id="view-profile" style="display:none;">
-        <h2 class="view-title">Profilo</h2>
+        <h2 class="view-title" data-i18n="nav.profile">Profilo</h2>
 
         <div class="card">
           <div style="display:flex; align-items:center; gap:12px;">
-            <img id="profileAvatar" src="" alt="Avatar" style="width:64px; height:64px; border-radius:999px; object-fit:cover; background:#e5e7eb;" />
+            <img id="profileAvatar" src="" data-i18n-alt="profile.avatarAlt" alt="Avatar" style="width:64px; height:64px; border-radius:999px; object-fit:cover; background:#e5e7eb;" />
             <div>
               <div id="profileName" style="font-weight:800;"></div>
               <div id="profileEmail" class="whoami"></div>
@@ -238,53 +238,53 @@
 
           <hr style="border:none; border-top:1px solid var(--border); margin:14px 0;" />
 
-          <label><strong>Cambia avatar</strong></label>
+          <label><strong data-i18n="profile.changeAvatar">Cambia avatar</strong></label>
           <input id="avatarInput" type="file" accept="image/*" />
-          <button id="changeAvatarBtn" type="button" class="btn-secondary">Aggiorna avatar</button>
+          <button id="changeAvatarBtn" type="button" class="btn-secondary" data-i18n="profile.updateAvatar">Aggiorna avatar</button>
 
           <div style="height:10px;"></div>
 
-          <label><strong>Colore profilo</strong></label>
+          <label><strong data-i18n="profile.color">Colore profilo</strong></label>
           <div id="colorPalette" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
 
           <div style="height:10px;"></div>
-          <button id="logoutBtn2" type="button" class="btn-secondary">Logout</button>
+          <button id="logoutBtn2" type="button" class="btn-secondary" data-i18n="auth.logoutBtn">Logout</button>
         </div>
 
         <div id="adminPanel" class="card" style="display:none;">
-          <h3>Admin</h3>
-          <p class="muted">Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.</p>
+          <h3 data-i18n="admin.title">Admin</h3>
+          <p class="muted" data-i18n="admin.description">Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.</p>
 
           <div class="admin-grid">
             <div>
-              <label><strong>Allenatori</strong></label>
+              <label><strong data-i18n="admin.coaches">Allenatori</strong></label>
               <div class="row" style="gap:10px;">
-                <input id="coachNameInput" type="text" placeholder="Nuovo allenatore" />
-                <button id="addCoachBtn" type="button">Aggiungi</button>
+                <input id="coachNameInput" type="text" data-i18n-placeholder="admin.newCoach" placeholder="Nuovo allenatore" />
+                <button id="addCoachBtn" type="button" data-i18n="actions.add">Aggiungi</button>
               </div>
               <div id="coachList" class="chip-list"></div>
             </div>
 
             <div>
-              <label><strong>Tipi allenamento</strong></label>
+              <label><strong data-i18n="admin.trainingTypes">Tipi allenamento</strong></label>
               <div class="row" style="gap:10px;">
-                <input id="trainingTypeInput" type="text" placeholder="Nuovo tipo allenamento" />
-                <button id="addTrainingTypeBtn" type="button">Aggiungi</button>
+                <input id="trainingTypeInput" type="text" data-i18n-placeholder="admin.newTrainingType" placeholder="Nuovo tipo allenamento" />
+                <button id="addTrainingTypeBtn" type="button" data-i18n="actions.add">Aggiungi</button>
               </div>
               <div id="trainingTypeList" class="chip-list"></div>
             </div>
           </div>
 
           <div id="adminAthleteColorManager" style="display:none; margin-top:16px;">
-            <label><strong>Colore atleta</strong></label>
+            <label><strong data-i18n="admin.athleteColor">Colore atleta</strong></label>
             <div class="row" style="gap:10px; align-items:center; margin-top:8px; flex-wrap:wrap;">
               <select id="adminAthleteSelect" style="min-width:220px;"></select>
               <input id="adminAthleteCustomColor" type="color" value="#2563eb" />
-              <button id="adminAthleteSaveColorBtn" type="button">Salva colore</button>
+              <button id="adminAthleteSaveColorBtn" type="button" data-i18n="admin.saveColor">Salva colore</button>
               <span id="adminAthleteColorPreview" style="width:22px; height:22px; border-radius:999px; border:1px solid var(--border); display:inline-block;"></span>
             </div>
             <div id="adminAthleteColorPalette" style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px;"></div>
-            <p class="muted" style="margin-top:8px;">Come admin puoi scegliere e salvare il colore del calendario per ogni atleta.</p>
+            <p class="muted" style="margin-top:8px;" data-i18n="admin.athleteColorHelp">Come admin puoi scegliere e salvare il colore del calendario per ogni atleta.</p>
           </div>
         </div>
       </section>
@@ -292,10 +292,10 @@
     </div>
 
     <nav class="bottom-nav">
-      <button class="nav-item active" data-target="view-dashboard" type="button"><span>Home</span></button>
-      <button class="nav-item" data-target="view-calendar" type="button"><span>Calendario</span></button>
-      <button class="nav-item" data-target="view-list" type="button"><span>Lista</span></button>
-      <button class="nav-item" data-target="view-profile" type="button"><span>Profilo</span></button>
+      <button class="nav-item active" data-target="view-dashboard" type="button"><span data-i18n="nav.home">Home</span></button>
+      <button class="nav-item" data-target="view-calendar" type="button"><span data-i18n="nav.calendar">Calendario</span></button>
+      <button class="nav-item" data-target="view-list" type="button"><span data-i18n="nav.list">Lista</span></button>
+      <button class="nav-item" data-target="view-profile" type="button"><span data-i18n="nav.profile">Profilo</span></button>
     </nav>
   </div>
 
