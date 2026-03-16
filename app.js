@@ -128,7 +128,7 @@ function mountColorPalette(){
     btn.className = "dotpick";
     btn.dataset.color = col;
     btn.style.setProperty("--c", col);
-    btn.setAttribute("aria-label", "Colore " + col);
+    btn.setAttribute("aria-label", tr("profile.colorSwatch", { color: col }));
     if (col === saved) btn.classList.add("active");
 
     btn.onclick = () => {
@@ -242,7 +242,7 @@ async function mountAdminAthleteColorManager(){
 
   panel.style.display = "block";
   const athletes = await fetchAthletes();
-  const options = ['<option value="">Seleziona atleta</option>']
+  const options = [`<option value="">${tr("admin.selectAthlete")}</option>`]
     .concat(athletes.map(a => {
       const name = a.full_name || a.id;
       const color = normalizeHexColor(a.trainer_color) || getFallbackCalendarColor(a.id);
@@ -267,7 +267,7 @@ async function mountAdminAthleteColorManager(){
     btn.className = "dotpick";
     btn.dataset.color = col;
     btn.style.setProperty("--c", col);
-    btn.setAttribute("aria-label", "Colore atleta " + col);
+    btn.setAttribute("aria-label", tr("admin.athleteColorSwatch", { color: col }));
     btn.onclick = () => applyPreview(col);
     palette.appendChild(btn);
   });
@@ -287,7 +287,7 @@ async function mountAdminAthleteColorManager(){
     const userId = select.value;
     const safe = normalizeHexColor(selectedColor || customInput.value);
     if (!userId || !safe) {
-      alert('Seleziona un atleta e un colore valido.');
+      alert(tr("admin.selectAthleteAndColor"));
       return;
     }
 
@@ -397,8 +397,8 @@ function bindAvatarUpload(){
   input.onchange = async () => {
     const file = input.files && input.files[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) { alert("Seleziona un file immagine."); return; }
-    if (file.size > 1500000) { alert("Immagine troppo grande (max ~1.5MB)."); return; }
+    if (!file.type.startsWith("image/")) { alert(tr("profile.selectImage")); return; }
+    if (file.size > 1500000) { alert(tr("profile.imageTooLarge")); return; }
 
     // local preview
     const reader = new FileReader();
@@ -423,7 +423,7 @@ function bindAvatarUpload(){
 }
     } catch (e) {
       console.warn("Avatar upload error:", e);
-      alert("Upload avatar fallito. Verifica bucket \"avatars\" e policy Storage (403/404). Dettagli in console.");
+      alert(tr("profile.avatarUploadFailed"));
     } finally {
       input.value = "";
     }
@@ -525,8 +525,8 @@ function refreshAdminLists(){
 function refreshFormOptions(){
   const currentTipo = tipo?.value || "";
   const currentCoach = allenatore?.value || "";
-  populateSimpleSelect(tipo, getTrainingTypes(), "Seleziona tipo allenamento");
-  populateSimpleSelect(allenatore, getCoaches(), "Seleziona allenatore");
+  populateSimpleSelect(tipo, getTrainingTypes(), tr("form.selectType"));
+  populateSimpleSelect(allenatore, getCoaches(), tr("form.selectCoach"));
   if (tipo && currentTipo && getTrainingTypes().includes(currentTipo)) tipo.value = currentTipo;
   if (allenatore && currentCoach && getCoaches().includes(currentCoach)) allenatore.value = currentCoach;
 }
@@ -537,7 +537,7 @@ async function addCatalogItem(tableName, rawName){
   const { error } = await supabaseClient.from(tableName).upsert({ name, is_active: true }, { onConflict: "name" });
   if (error) {
     console.error(error);
-    alert("Impossibile salvare il valore su Supabase.");
+    alert(tr("alerts.supabaseSaveFailed"));
     return;
   }
   await loadSharedCatalogs();
@@ -549,7 +549,7 @@ async function removeCatalogItem(tableName, name){
   const { error } = await supabaseClient.from(tableName).delete().eq("name", name);
   if (error) {
     console.error(error);
-    alert("Impossibile rimuovere il valore da Supabase.");
+    alert(tr("alerts.supabaseDeleteFailed"));
     return;
   }
   await loadSharedCatalogs();
@@ -640,7 +640,7 @@ async function updateCompareDashboard(){
     .in('user_id', ids)
     .gte('data', fromDate)
     .lte('data', toDate);
-  if (error) { compareSummary.innerHTML = '<div class="muted">Errore nel confronto.</div>'; return; }
+  if (error) { compareSummary.innerHTML = `<div class="muted">${tr("compare.error")}</div>`; return; }
   const athletes = await fetchAthletes();
   const athleteMap = new Map(athletes.map(a => [a.id, a]));
   const cards = ids.map(id => {
@@ -691,11 +691,12 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 function formatDate(dateStr) {
-  const [y, m, d] = dateStr.split("-");
-  return `${d}.${m}.${y}`;
+  const d = new Date(dateStr + 'T00:00:00');
+  if (Number.isNaN(d.getTime())) return dateStr;
+  return new Intl.DateTimeFormat(currentLang, { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
 }
 function monthLabel(dateObj) {
-  return dateObj.toLocaleDateString(currentLang, { month: "long", year: "numeric" });
+  return new Intl.DateTimeFormat(currentLang, { month: 'long', year: 'numeric' }).format(dateObj);
 }
 function safeNumber(v) {
   const n = Number(v);
@@ -743,7 +744,8 @@ async function enrichWithProfiles(rows) {
 
 function clearEditingMode() {
   editingId = null;
-  if (submitBtn) submitBtn.textContent = "➕ Aggiungi";
+  if (submitBtn) submitBtn.textContent = tr("actions.addWithIcon");
+  const formTitle = document.getElementById("workoutFormTitle"); if (formTitle) formTitle.textContent = tr("form.addWorkout");
   refreshFormOptions();
   if (persone) persone.value = "";
 }
@@ -766,7 +768,7 @@ document.getElementById("registerBtn").onclick = async () => {
     options: { data: { full_name } }
   });
   if (error) alert(error.message);
-  else alert("Registrazione completata!");
+  else alert(tr("auth.registered"));
 };
 
 document.getElementById("logoutBtn").onclick = async () => {
@@ -805,16 +807,16 @@ async function populateUserFilter() {
 
   if (error) {
     console.error("Errore caricamento utenti:", error);
-    userFilterSelect.innerHTML = `<option value="__all__">Tutti</option>`;
+    userFilterSelect.innerHTML = `<option value="__all__">${tr("admin.all")}</option>`;
     userFilterSelect.value = "__all__";
     selectedUserId = "__all__";
     return;
   }
 
   const opts = [];
-  opts.push(`<option value="__all__">Tutte le atlete</option>`);
-  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">Le mie sessioni</option>`);
-  (data || []).forEach(p => opts.push(`<option value="${p.id}">${p.full_name || "(senza nome)"}</option>`));
+  opts.push(`<option value="__all__">${tr("admin.allAthletes")}</option>`);
+  if (currentUser?.id) opts.push(`<option value="${currentUser.id}">${tr("admin.mySessions")}</option>`);
+  (data || []).forEach(p => opts.push(`<option value="${p.id}">${p.full_name || tr("common.unnamed")}</option>`));
   userFilterSelect.innerHTML = opts.join("\n");
   userFilterSelect.value = "__all__";
   selectedUserId = "__all__";
@@ -849,7 +851,7 @@ isAdmin = await getIsAdmin();
   appDiv.style.display = "block";
 
   const display = currentUser.user_metadata?.full_name || currentUser.email || "";
-  whoami.textContent = isAdmin ? `👑 ${display} (admin)` : `👤 ${display}`;
+  whoami.textContent = isAdmin ? tr("auth.whoamiAdmin", { name: display }) : tr("auth.whoamiUser", { name: display });
 
   if (userFilterSelect && userFilterWrap) {
     if (isAdmin) { userFilterWrap.style.display = "flex"; await populateUserFilter(); }
@@ -872,19 +874,19 @@ form.onsubmit = async (e) => {
   const { data: { session }, error: sessErr } = await supabaseClient.auth.getSession();
   if (sessErr || !session?.user?.id) {
     console.error(sessErr);
-    alert("Sessione non valida. Rifai login.");
+    alert(tr("alerts.invalidSession"));
     return;
   }
 
   // campi minimi
   if (!dataInput.value || !ora_inizio.value || !tipo.value) {
-    alert("Compila almeno Data, Ora e Tipo.");
+    alert(tr("alerts.fillRequired"));
     return;
   }
 
   // Se sei admin e vuoi inserire per altri, devi scegliere un utente specifico
   if (isAdmin && selectedUserId === "__all__") {
-    alert("Se sei admin, seleziona prima un utente specifico (non 'Tutti') dal menu Visualizza.");
+    alert(tr("alerts.selectSpecificUser"));
     return;
   }
 
@@ -916,7 +918,7 @@ form.onsubmit = async (e) => {
     form.reset();
     await caricaAllenamentiMese();
     if (giornoSelezionato) await caricaAllenamenti(giornoSelezionato);
-    alert("Allenamento aggiornato ✅");
+    alert(tr("alerts.workoutUpdated"));
     return;
   }
 
@@ -989,7 +991,7 @@ function renderCalendar() {
     }
 
     const tooltip = dayRows
-      .map(r => `${r._full_name || 'Atleta'}${r._trainer_color ? ` (${r._trainer_color})` : ''}`)
+      .map(r => `${r._full_name || tr('common.athlete')}${r._trainer_color ? ` (${r._trainer_color})` : ''}`)
       .join(' · ')
       .replace(/"/g, '&quot;');
 
@@ -1039,7 +1041,7 @@ function changeDay(offset) {
     try {
       listaTitle.textContent = tr("list.workoutsOf", { date: formatDate(newDate) });
     } catch (e) {
-      listaTitle.textContent = "Lista - " + formatDate(newDate);
+      listaTitle.textContent = tr("list.titleWithDate", { date: formatDate(newDate) });
     }
   }
 
@@ -1064,13 +1066,13 @@ async function caricaAllenamenti(data) {
   if (isAdmin && selectedUserId !== "__all__") query = query.eq("user_id", selectedUserId);
 
   const { data: rows, error } = await query;
-  if (error) { console.error(error); listaDiv.innerHTML = "<p>Errore caricamento</p>"; return; }
+  if (error) { console.error(error); listaDiv.innerHTML = `<p>${tr("list.loadError")}</p>`; return; }
 
   const enriched = await enrichWithProfiles(rows || []);
   listaDiv.innerHTML = "";
 
   if (!enriched || enriched.length === 0) {
-    listaDiv.innerHTML = "<p>Nessun allenamento</p>";
+    listaDiv.innerHTML = `<p>${tr("list.noWorkouts")}</p>`;
     return;
   }
 
@@ -1086,22 +1088,22 @@ async function caricaAllenamenti(data) {
           ${avatarHtml(a._avatar_url, who)}
           <div class="athlete-meta">
             <div class="athlete-name">${who}</div>
-            <div class="athlete-sub">Atleta</div>
+            <div class="athlete-sub">${tr('common.athlete')}</div>
           </div>
         </div>
-        <div>📅 <strong>Data:</strong> ${formatDate(a.data)}</div>
-        <div>⏰ <strong>Ora:</strong> ${a.ora_inizio}</div>
-        <div>🏋️ <strong>Tipo:</strong> ${a.tipo}</div>
-        <div>🤝 <strong>Allenatore:</strong> ${coachName}</div>
-        <div>👥 <strong>Dettagli:</strong> ${details}</div>
-        <div>👥 <strong>Partecipanti:</strong> ${a.numero_partecipanti || "-"}</div>
-        <div>⏱ <strong>Durata:</strong> ${a.durata ? a.durata + " min" : "-"}</div>
-        <div>📝 <strong>Note:</strong> ${a.note || "-"}</div>
+        <div>📅 <strong>${tr("form.date")}:</strong> ${formatDate(a.data)}</div>
+        <div>⏰ <strong>${tr("form.time")}:</strong> ${a.ora_inizio}</div>
+        <div>🏋️ <strong>${tr("form.type")}:</strong> ${a.tipo}</div>
+        <div>🤝 <strong>${tr("form.coach")}:</strong> ${coachName}</div>
+        <div>👥 <strong>${tr("list.details")}:</strong> ${details}</div>
+        <div>👥 <strong>${tr("form.participants")}:</strong> ${a.numero_partecipanti || "-"}</div>
+        <div>⏱ <strong>${tr("form.duration")}:</strong> ${a.durata ? a.durata + " " + tr("common.minutes") : "-"}</div>
+        <div>📝 <strong>${tr("form.notes")}:</strong> ${a.note || "-"}</div>
 
         ${canEdit ? `
           <div class="actions">
-            <button onclick="modificaAllenamento('${a.id}')">✏️ Modifica</button>
-            <button onclick="eliminaAllenamento('${a.id}')" class="btn-secondary">🗑 Elimina</button>
+            <button onclick="modificaAllenamento('${a.id}')">${tr("actions.editWithIcon")}</button>
+            <button onclick="eliminaAllenamento('${a.id}')" class="btn-secondary">${tr("actions.deleteWithIcon")}</button>
           </div>
         ` : ""}
       </div>
@@ -1110,7 +1112,7 @@ async function caricaAllenamenti(data) {
 }
 
 window.eliminaAllenamento = async function (id) {
-  if (!confirm("Vuoi eliminare questo allenamento?")) return;
+  if (!confirm(tr("alerts.confirmDeleteWorkout"))) return;
 
   const { error } = await supabaseClient
     .from("allenamenti")
@@ -1159,8 +1161,9 @@ window.modificaAllenamento = async function (id) {
   showView("view-calendar");
   form.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
-  if (submitBtn) submitBtn.textContent = "💾 Salva";
-  alert("Modalità modifica: ora modifica i campi e poi premi SALVA ✅");
+  if (submitBtn) submitBtn.textContent = tr("actions.saveWithIcon");
+  const formTitle = document.getElementById("workoutFormTitle"); if (formTitle) formTitle.textContent = tr("form.editWorkout");
+  alert(tr("alerts.editMode"));
 };
 
 // ================= DASHBOARD =================
@@ -1168,7 +1171,7 @@ async function updateDashboard() {
   syncDashboardRangeUI();
   const { start, end, fromDate, toDate, mode } = getDashboardRange();
   if (dashPeriodLabel) {
-    dashPeriodLabel.textContent = `${formatDate(isoDate(start))} → ${formatDate(isoDate(end))}${mode === 'custom' ? ' (personalizzato)' : ''}`;
+    dashPeriodLabel.textContent = `${formatDate(isoDate(start))} → ${formatDate(isoDate(end))}${mode === 'custom' ? ` (${tr("dash.customRangeLower")})` : ''}`;
   }
   let query = supabaseClient.from("allenamenti").select("durata, numero_partecipanti, data, user_id").gte("data", fromDate).lte("data", toDate);
   if (isAdmin && selectedUserId !== "__all__") query = query.eq("user_id", selectedUserId);
@@ -1291,8 +1294,8 @@ applyExportBtn?.addEventListener("click", async () => {
     if (!giornoSelezionato && getSelectedExportMode() === "custom") {
       const from = dateFromInput?.value;
       const to = dateToInput?.value;
-      if (!from || !to) return alert("Seleziona 'Dal' e 'Al'.");
-      if (from > to) return alert("La data 'Dal' non può essere dopo 'Al'.");
+      if (!from || !to) return alert(tr("export.selectFromTo"));
+      if (from > to) return alert(tr("export.invalidRange"));
     }
 
     closeExportOptions();
@@ -1302,26 +1305,26 @@ applyExportBtn?.addEventListener("click", async () => {
     lastExportIntent = null;
   } catch (e) {
     console.error(e);
-    alert("Errore applicazione periodo export");
+    alert(tr("export.applyError"));
   }
 });
 
 // ================= EXPORT EXCEL =================
 async function doExportExcel() {
   try {
-    if (typeof XLSX === "undefined") return alert("Libreria XLSX non caricata.");
+    if (typeof XLSX === "undefined") return alert(tr("export.xlsxMissing"));
     const { rows, fromDate, toDate } = await fetchExportRows();
-    if (!rows || rows.length === 0) return alert("Nessun dato da esportare");
+    if (!rows || rows.length === 0) return alert(tr("export.noData"));
 
     const formatted = rows.map((a) => ({
-      Data: a.data ? formatDate(a.data) : "",
-      Ora: a.ora_inizio || "",
-      Tipo: a.tipo || "",
-      Durata_min: a.durata ?? "",
-      Partecipanti: a.numero_partecipanti ?? "",
-      Trainer: a.persone ?? "",
-      Inserito_da: isAdmin ? (a._full_name || "-") : "",
-      Note: a.note ?? "",
+      [tr("export.colDate")]: a.data ? formatDate(a.data) : "",
+      [tr("export.colTime")]: a.ora_inizio || "",
+      [tr("export.colType")]: a.tipo || "",
+      [tr("export.colDurationMin")]: a.durata ?? "",
+      [tr("export.colParticipants")]: a.numero_partecipanti ?? "",
+      [tr("export.colCoach")]: a.persone ?? "",
+      [tr("export.colCreatedBy")]: isAdmin ? (a._full_name || "-") : "",
+      [tr("form.notes")]: a.note ?? "",
       ID: a.id ?? ""
     }));
 
@@ -1334,7 +1337,7 @@ async function doExportExcel() {
     });
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, giornoSelezionato ? "Giorno" : "Periodo");
+    XLSX.utils.book_append_sheet(wb, ws, giornoSelezionato ? tr("export.sheetDay") : tr("export.sheetPeriod"));
 
     const safeFrom = fromDate.replaceAll("-", "");
     const safeTo = toDate.replaceAll("-", "");
@@ -1342,7 +1345,7 @@ async function doExportExcel() {
     XLSX.writeFile(wb, fileName);
   } catch (e) {
     console.error(e);
-    alert("Errore export Excel");
+    alert(tr("export.excelError"));
   }
 }
 
@@ -1356,7 +1359,7 @@ exportExcelBtn?.addEventListener("click", async () => {
     await doExportExcel();
   } catch (e) {
     console.error(e);
-    alert("Errore export Excel");
+    alert(tr("export.excelError"));
   }
 });
 
@@ -1364,7 +1367,7 @@ exportExcelBtn?.addEventListener("click", async () => {
 async function doExportPdf() {
   try {
     const { rows, fromDate, toDate } = await fetchExportRows();
-    if (!rows || rows.length === 0) return alert("Nessun dato da esportare");
+    if (!rows || rows.length === 0) return alert(tr("export.noData"));
 
     const { jsPDF } = window.jspdf;
 
@@ -1375,9 +1378,9 @@ async function doExportPdf() {
 });
 
     const title = giornoSelezionato
-      ? `Report Allenamenti (${fromDate})`
-      : `Report Allenamenti (${monthLabel(currentMonth)})`;
-    const subtitle = `Periodo: ${fromDate} → ${toDate}`;
+      ? `${tr("export.reportTitle")} (${fromDate})`
+      : `${tr("export.reportTitle")} (${monthLabel(currentMonth)})`;
+    const subtitle = `${tr("export.periodLabel")}: ${fromDate} → ${toDate}`;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
@@ -1387,7 +1390,7 @@ async function doExportPdf() {
     doc.setFontSize(11);
     doc.text(subtitle, 40, 70);
 
-    const headers = ["Data", "Ora", "Tipo", "Durata", "Partecipanti", "Trainer", ...(isAdmin ? ["Inserito da"] : [])];
+    const headers = [tr("export.colDate"), tr("export.colTime"), tr("export.colType"), tr("export.colDuration"), tr("export.colParticipants"), tr("export.colCoach"), ...(isAdmin ? [tr("export.colCreatedBySpaced")] : [])];
     const colWidths = isAdmin ? [70, 50, 140, 60, 80, 110, 90] : [70, 50, 160, 60, 80, 120];
 
     let y = 95;
@@ -1408,7 +1411,7 @@ async function doExportPdf() {
         a.data ? formatDate(a.data) : "",
         a.ora_inizio || "",
         a.tipo || "",
-        a.durata ? `${a.durata}m` : "-",
+        a.durata ? `${a.durata}${tr("common.minutesShort")}` : "-",
         a.numero_partecipanti ?? "-",
         a.persone || "-",
         ...(isAdmin ? [a._full_name || "-"] : [])
@@ -1433,7 +1436,7 @@ async function doExportPdf() {
     doc.save(filename);
   } catch (e) {
     console.error(e);
-    alert("Errore export PDF");
+    alert(tr("export.pdfError"));
   }
 }
 
@@ -1447,7 +1450,7 @@ exportPdfBtn?.addEventListener("click", async () => {
     await doExportPdf();
   } catch (e) {
     console.error(e);
-    alert("Errore export PDF");
+    alert(tr("export.pdfError"));
   }
 });
 
@@ -1466,49 +1469,141 @@ const I18N = {
     "auth.loginBtn": "Login",
     "auth.registerBtn": "Registrati",
     "auth.logoutBtn": "Logout",
-    "admin.viewAs": "Visualizza:",
+    "auth.registered": "Registrazione completata!",
+    "auth.whoamiAdmin": "👑 {name} (admin)",
+    "auth.whoamiUser": "👤 {name}",
+    "admin.title": "Admin",
+    "admin.description": "Gestisci allenatori e tipi di allenamento disponibili nei menu a tendina.",
+    "admin.activeAthlete": "Atleta attiva",
     "admin.all": "Tutti",
+    "admin.allFemale": "Tutte",
+    "admin.allAthletes": "Tutte le atlete",
+    "admin.mySessions": "Le mie sessioni",
+    "admin.coaches": "Allenatori",
+    "admin.trainingTypes": "Tipi allenamento",
+    "admin.newCoach": "Nuovo allenatore",
+    "admin.newTrainingType": "Nuovo tipo allenamento",
+    "admin.athleteColor": "Colore atleta",
+    "admin.saveColor": "Salva colore",
+    "admin.selectAthlete": "Seleziona atleta",
+    "admin.selectAthleteAndColor": "Seleziona un atleta e un colore valido.",
+    "admin.athleteColorHelp": "Come admin puoi scegliere e salvare il colore del calendario per ogni atleta.",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendario",
     "nav.list": "Lista",
-    "dash.sessionsMonth": "Sessioni mese",
-    "dash.totalHours": "Ore totali",
-    "dash.avgParticipants": "Partecipanti medi",
+    "nav.profile": "Profilo",
+    "stats.sessions": "Sessioni",
+    "stats.totalHours": "Ore totali",
+    "stats.avgParticipants": "Media partecipanti",
+    "stats.hours": "Ore",
+    "stats.average": "Media",
     "dash.period": "Periodo",
-    "dash.goCalendar": "Vai al calendario",
-    "dash.goList": "Vai alla lista",
-    "cal.hint": "Tocca un giorno per visualizzare gli allenamenti.",
-    "people.sophie": "Sophie",
-    "people.vivienne": "Vivienne",
-    "people.both": "Entrambe",
-    "list.newWorkout": "Nuovo allenamento",
+    "dash.thisMonth": "Questo mese",
+    "dash.lastMonth": "Mese scorso",
+    "dash.thisYear": "Quest'anno",
+    "dash.all": "Tutto",
+    "dash.customRange": "Intervallo personalizzato",
+    "dash.goCalendar": "Vai al Calendario",
+    "dash.goList": "Vai alla Lista",
+    "compare.title": "Confronto atlete",
+    "compare.athlete1": "Atleta 1",
+    "compare.athlete2": "Atleta 2",
+    "compare.error": "Errore nel confronto.",
+    "calendar.legend": "Il colore del giorno segue il profilo dell'atleta",
+    "list.selectDay": "Seleziona un giorno dal calendario per vedere la lista.",
     "list.workouts": "Allenamenti",
     "list.workoutsOf": "Allenamenti del {date}",
-    "form.typePh": "Tipo allenamento",
+    "list.titleWithDate": "Lista - {date}",
+    "list.noWorkouts": "Nessun allenamento",
+    "list.loadError": "Errore caricamento",
+    "list.details": "Dettagli",
+    "form.addWorkout": "Aggiungi allenamento",
+    "form.editWorkout": "Modifica allenamento",
+    "form.type": "Tipo allenamento",
+    "form.coach": "Allenatore",
+    "form.selectType": "Seleziona tipo allenamento",
+    "form.selectCoach": "Seleziona allenatore",
     "form.date": "Data",
     "form.time": "Ora",
-    "form.durationPh": "Durata (min)",
-    "form.participantsPh": "Partecipanti",
-    "form.withWhomPh": "Trainer / Con chi",
-    "form.notesPh": "Note",
-    "form.addBtn": "➕ Aggiungi",
-    "export.excel": "📊 Esporta Excel",
-    "export.pdf": "📄 Esporta PDF",
-    "export.title": "Esporta:",
+    "form.startTime": "Ora inizio",
+    "form.duration": "Durata (minuti)",
+    "form.durationExample": "Es. 60",
+    "form.participants": "Numero partecipanti",
+    "form.participantsExample": "Es. 10",
+    "form.people": "Persone / dettagli aggiuntivi",
+    "form.peopleExample": "Es. gruppo, assistenti, note rapide",
+    "form.notes": "Note",
+    "form.notesPlaceholder": "Note...",
+    "form.save": "Salva",
+    "profile.stats": "Statistiche",
+    "profile.changeAvatar": "Cambia avatar",
+    "profile.updateAvatar": "Aggiorna avatar",
+    "profile.color": "Colore profilo",
+    "profile.colorSwatch": "Colore {color}",
+    "profile.selectImage": "Seleziona un file immagine.",
+    "profile.imageTooLarge": "Immagine troppo grande (max ~1.5MB).",
+    "profile.avatarUploadFailed": "Upload avatar fallito. Verifica bucket \"avatars\" e policy Storage (403/404). Dettagli in console.",
+    "actions.add": "Aggiungi",
+    "actions.addWithIcon": "➕ Aggiungi",
+    "actions.saveWithIcon": "💾 Salva",
+    "actions.editWithIcon": "✏️ Modifica",
+    "actions.deleteWithIcon": "🗑 Elimina",
+    "export.section": "Export",
+    "export.excel": "Esporta Excel",
+    "export.pdf": "Esporta PDF",
+    "export.options": "Opzioni export",
     "export.month": "Mese",
-    "export.monthLabel": "Mese:",
-    "export.custom": "Periodo personalizzato",
-    "export.from": "Dal:",
-    "export.to": "Al:",
+    "export.custom": "Intervallo date",
+    "export.selectMonth": "Seleziona mese",
     "export.apply": "Applica",
-    "weekday.mon": "L",
-    "weekday.tue": "M",
-    "weekday.wed": "M",
-    "weekday.thu": "G",
-    "weekday.fri": "V",
-    "weekday.sat": "S",
-    "weekday.sun": "D",
-    "alerts.workoutUpdated": "Allenamento aggiornato ✅"
+    "export.selectFromTo": "Seleziona 'Dal' e 'Al'.",
+    "export.invalidRange": "La data 'Dal' non può essere dopo 'Al'.",
+    "export.applyError": "Errore applicazione periodo export",
+    "export.xlsxMissing": "Libreria XLSX non caricata.",
+    "export.noData": "Nessun dato da esportare",
+    "export.excelError": "Errore export Excel",
+    "export.pdfError": "Errore export PDF",
+    "weekday.mon": "Lun",
+    "weekday.tue": "Mar",
+    "weekday.wed": "Mer",
+    "weekday.thu": "Gio",
+    "weekday.fri": "Ven",
+    "weekday.sat": "Sab",
+    "weekday.sun": "Dom",
+    "common.athlete": "Atleta",
+    "common.user": "Utente",
+    "common.admin": "Admin",
+    "common.unnamed": "(senza nome)",
+    "alerts.invalidSession": "Sessione non valida. Rifai login.",
+    "alerts.fillRequired": "Compila almeno Data, Ora e Tipo.",
+    "alerts.selectSpecificUser": "Se sei admin, seleziona prima un utente specifico (non 'Tutti') dal menu Visualizza.",
+    "alerts.workoutUpdated": "Allenamento aggiornato ✅",
+    "alerts.confirmDeleteWorkout": "Vuoi eliminare questo allenamento?",
+    "alerts.editMode": "Modalità modifica: ora modifica i campi e poi premi SALVA ✅",
+    "alerts.supabaseSaveFailed": "Impossibile salvare il valore su Supabase.",
+    "alerts.supabaseDeleteFailed": "Impossibile rimuovere il valore da Supabase.",
+    "admin.athleteColorSwatch": "Colore atleta {color}",
+    "list.prevDay": "Giorno precedente",
+    "list.nextDay": "Giorno successivo",
+    "profile.avatarAlt": "Avatar",
+    "calendar.legendAria": "Legenda colori calendario",
+    "export.colDate": "Data",
+    "export.colTime": "Ora",
+    "export.colType": "Tipo",
+    "export.colDuration": "Durata",
+    "export.colDurationMin": "Durata_min",
+    "export.colParticipants": "Partecipanti",
+    "export.colCoach": "Allenatore",
+    "export.colCreatedBy": "Inserito_da",
+    "export.colCreatedBySpaced": "Inserito da",
+    "export.sheetDay": "Giorno",
+    "export.sheetPeriod": "Periodo",
+    "export.reportTitle": "Report allenamenti",
+    "export.periodLabel": "Periodo",
+    "common.minutes": "min",
+    "common.minutesShort": "m",
+    "dash.customRangeLower": "personalizzato",
   },
   en: {
     "app.title": "Workouts",
@@ -1520,53 +1615,145 @@ const I18N = {
     "auth.loginBtn": "Login",
     "auth.registerBtn": "Register",
     "auth.logoutBtn": "Logout",
-    "admin.viewAs": "View:",
+    "auth.registered": "Registration completed!",
+    "auth.whoamiAdmin": "👑 {name} (admin)",
+    "auth.whoamiUser": "👤 {name}",
+    "admin.title": "Admin",
+    "admin.description": "Manage coaches and workout types available in the dropdown menus.",
+    "admin.activeAthlete": "Active athlete",
     "admin.all": "All",
+    "admin.allFemale": "All",
+    "admin.allAthletes": "All athletes",
+    "admin.mySessions": "My sessions",
+    "admin.coaches": "Coaches",
+    "admin.trainingTypes": "Workout types",
+    "admin.newCoach": "New coach",
+    "admin.newTrainingType": "New workout type",
+    "admin.athleteColor": "Athlete color",
+    "admin.saveColor": "Save color",
+    "admin.selectAthlete": "Select athlete",
+    "admin.selectAthleteAndColor": "Select an athlete and a valid color.",
+    "admin.athleteColorHelp": "As admin you can choose and save the calendar color for each athlete.",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Calendar",
     "nav.list": "List",
-    "dash.sessionsMonth": "Sessions this month",
-    "dash.totalHours": "Total hours",
-    "dash.avgParticipants": "Average participants",
+    "nav.profile": "Profile",
+    "stats.sessions": "Sessions",
+    "stats.totalHours": "Total hours",
+    "stats.avgParticipants": "Average participants",
+    "stats.hours": "Hours",
+    "stats.average": "Average",
     "dash.period": "Period",
-    "dash.goCalendar": "Go to calendar",
-    "dash.goList": "Go to list",
-    "cal.hint": "Tap a day to view workouts.",
-    "people.sophie": "Sophie",
-    "people.vivienne": "Vivienne",
-    "people.both": "Both",
-    "list.newWorkout": "New workout",
+    "dash.thisMonth": "This month",
+    "dash.lastMonth": "Last month",
+    "dash.thisYear": "This year",
+    "dash.all": "All",
+    "dash.customRange": "Custom range",
+    "dash.goCalendar": "Go to Calendar",
+    "dash.goList": "Go to List",
+    "compare.title": "Athlete comparison",
+    "compare.athlete1": "Athlete 1",
+    "compare.athlete2": "Athlete 2",
+    "compare.error": "Comparison error.",
+    "calendar.legend": "The day color follows the athlete profile color",
+    "list.selectDay": "Select a day from the calendar to see the list.",
     "list.workouts": "Workouts",
     "list.workoutsOf": "Workouts on {date}",
-    "form.typePh": "Workout type",
+    "list.titleWithDate": "List - {date}",
+    "list.noWorkouts": "No workouts",
+    "list.loadError": "Loading error",
+    "list.details": "Details",
+    "form.addWorkout": "Add workout",
+    "form.editWorkout": "Edit workout",
+    "form.type": "Workout type",
+    "form.coach": "Coach",
+    "form.selectType": "Select workout type",
+    "form.selectCoach": "Select coach",
     "form.date": "Date",
     "form.time": "Time",
-    "form.durationPh": "Duration (min)",
-    "form.participantsPh": "Participants",
-    "form.withWhomPh": "Trainer / With whom",
-    "form.notesPh": "Notes",
-    "form.addBtn": "➕ Add",
-    "export.excel": "📊 Export Excel",
-    "export.pdf": "📄 Export PDF",
-    "export.title": "Export:",
+    "form.startTime": "Start time",
+    "form.duration": "Duration (minutes)",
+    "form.durationExample": "E.g. 60",
+    "form.participants": "Number of participants",
+    "form.participantsExample": "E.g. 10",
+    "form.people": "People / additional details",
+    "form.peopleExample": "E.g. group, assistants, quick notes",
+    "form.notes": "Notes",
+    "form.notesPlaceholder": "Notes...",
+    "form.save": "Save",
+    "profile.stats": "Statistics",
+    "profile.changeAvatar": "Change avatar",
+    "profile.updateAvatar": "Update avatar",
+    "profile.color": "Profile color",
+    "profile.colorSwatch": "Color {color}",
+    "profile.selectImage": "Select an image file.",
+    "profile.imageTooLarge": "Image too large (max ~1.5MB).",
+    "profile.avatarUploadFailed": "Avatar upload failed. Check the \"avatars\" bucket and Storage policies (403/404). Details in console.",
+    "actions.add": "Add",
+    "actions.addWithIcon": "➕ Add",
+    "actions.saveWithIcon": "💾 Save",
+    "actions.editWithIcon": "✏️ Edit",
+    "actions.deleteWithIcon": "🗑 Delete",
+    "export.section": "Export",
+    "export.excel": "Export Excel",
+    "export.pdf": "Export PDF",
+    "export.options": "Export options",
     "export.month": "Month",
-    "export.monthLabel": "Month:",
-    "export.custom": "Custom period",
-    "export.from": "From:",
-    "export.to": "To:",
+    "export.custom": "Date range",
+    "export.selectMonth": "Select month",
     "export.apply": "Apply",
-    "weekday.mon": "M",
-    "weekday.tue": "T",
-    "weekday.wed": "W",
-    "weekday.thu": "T",
-    "weekday.fri": "F",
-    "weekday.sat": "S",
-    "weekday.sun": "S",
-    "alerts.workoutUpdated": "Workout updated ✅"
+    "export.selectFromTo": "Select 'From' and 'To'.",
+    "export.invalidRange": "The 'From' date cannot be after 'To'.",
+    "export.applyError": "Error applying export range",
+    "export.xlsxMissing": "XLSX library not loaded.",
+    "export.noData": "No data to export",
+    "export.excelError": "Excel export error",
+    "export.pdfError": "PDF export error",
+    "weekday.mon": "Mon",
+    "weekday.tue": "Tue",
+    "weekday.wed": "Wed",
+    "weekday.thu": "Thu",
+    "weekday.fri": "Fri",
+    "weekday.sat": "Sat",
+    "weekday.sun": "Sun",
+    "common.athlete": "Athlete",
+    "common.user": "User",
+    "common.admin": "Admin",
+    "common.unnamed": "(unnamed)",
+    "alerts.invalidSession": "Invalid session. Please log in again.",
+    "alerts.fillRequired": "Fill in at least Date, Time and Type.",
+    "alerts.selectSpecificUser": "As admin, first select a specific user (not 'All') from the View menu.",
+    "alerts.workoutUpdated": "Workout updated ✅",
+    "alerts.confirmDeleteWorkout": "Do you want to delete this workout?",
+    "alerts.editMode": "Edit mode: now change the fields and then press SAVE ✅",
+    "alerts.supabaseSaveFailed": "Unable to save the value to Supabase.",
+    "alerts.supabaseDeleteFailed": "Unable to remove the value from Supabase.",
+    "admin.athleteColorSwatch": "Athlete color {color}",
+    "list.prevDay": "Previous day",
+    "list.nextDay": "Next day",
+    "profile.avatarAlt": "Avatar",
+    "calendar.legendAria": "Calendar color legend",
+    "export.colDate": "Date",
+    "export.colTime": "Time",
+    "export.colType": "Type",
+    "export.colDuration": "Duration",
+    "export.colDurationMin": "Duration_min",
+    "export.colParticipants": "Participants",
+    "export.colCoach": "Coach",
+    "export.colCreatedBy": "Created_by",
+    "export.colCreatedBySpaced": "Created by",
+    "export.sheetDay": "Day",
+    "export.sheetPeriod": "Period",
+    "export.reportTitle": "Workout report",
+    "export.periodLabel": "Period",
+    "common.minutes": "min",
+    "common.minutesShort": "m",
+    "dash.customRangeLower": "custom",
   },
   de: {
-    "app.title": "Training",
-    "app.brand": "Training",
+    "app.title": "Trainings",
+    "app.brand": "Trainings",
     "auth.title": "Login / Registrierung",
     "auth.fullNamePh": "Vollständiger Name (nur Registrierung)",
     "auth.emailPh": "E-Mail",
@@ -1574,49 +1761,141 @@ const I18N = {
     "auth.loginBtn": "Login",
     "auth.registerBtn": "Registrieren",
     "auth.logoutBtn": "Abmelden",
-    "admin.viewAs": "Anzeigen:",
+    "auth.registered": "Registrierung abgeschlossen!",
+    "auth.whoamiAdmin": "👑 {name} (Admin)",
+    "auth.whoamiUser": "👤 {name}",
+    "admin.title": "Admin",
+    "admin.description": "Verwalte Trainer und Trainingstypen in den Dropdown-Menüs.",
+    "admin.activeAthlete": "Aktive Athletin",
     "admin.all": "Alle",
+    "admin.allFemale": "Alle",
+    "admin.allAthletes": "Alle Athletinnen",
+    "admin.mySessions": "Meine Einheiten",
+    "admin.coaches": "Trainer",
+    "admin.trainingTypes": "Trainingstypen",
+    "admin.newCoach": "Neuer Trainer",
+    "admin.newTrainingType": "Neuer Trainingstyp",
+    "admin.athleteColor": "Athletinnenfarbe",
+    "admin.saveColor": "Farbe speichern",
+    "admin.selectAthlete": "Athletin wählen",
+    "admin.selectAthleteAndColor": "Wähle eine Athletin und eine gültige Farbe.",
+    "admin.athleteColorHelp": "Als Admin kannst du die Kalenderfarbe für jede Athletin wählen und speichern.",
+    "nav.home": "Home",
     "nav.dashboard": "Dashboard",
     "nav.calendar": "Kalender",
     "nav.list": "Liste",
-    "dash.sessionsMonth": "Sitzungen im Monat",
-    "dash.totalHours": "Gesamtstunden",
-    "dash.avgParticipants": "Ø Teilnehmer",
+    "nav.profile": "Profil",
+    "stats.sessions": "Einheiten",
+    "stats.totalHours": "Gesamtstunden",
+    "stats.avgParticipants": "Ø Teilnehmer",
+    "stats.hours": "Stunden",
+    "stats.average": "Durchschnitt",
     "dash.period": "Zeitraum",
+    "dash.thisMonth": "Dieser Monat",
+    "dash.lastMonth": "Letzter Monat",
+    "dash.thisYear": "Dieses Jahr",
+    "dash.all": "Alle",
+    "dash.customRange": "Benutzerdefinierter Zeitraum",
     "dash.goCalendar": "Zum Kalender",
     "dash.goList": "Zur Liste",
-    "cal.hint": "Tippe auf einen Tag, um Trainings zu sehen.",
-    "people.sophie": "Sophie",
-    "people.vivienne": "Vivienne",
-    "people.both": "Beide",
-    "list.newWorkout": "Neues Training",
+    "compare.title": "Athletinnenvergleich",
+    "compare.athlete1": "Athletin 1",
+    "compare.athlete2": "Athletin 2",
+    "compare.error": "Fehler beim Vergleich.",
+    "calendar.legend": "Die Tagesfarbe folgt der Profilfarbe der Athletin",
+    "list.selectDay": "Wähle einen Tag im Kalender, um die Liste zu sehen.",
     "list.workouts": "Trainings",
     "list.workoutsOf": "Trainings am {date}",
-    "form.typePh": "Trainingstyp",
+    "list.titleWithDate": "Liste - {date}",
+    "list.noWorkouts": "Keine Trainings",
+    "list.loadError": "Fehler beim Laden",
+    "list.details": "Details",
+    "form.addWorkout": "Training hinzufügen",
+    "form.editWorkout": "Training bearbeiten",
+    "form.type": "Trainingstyp",
+    "form.coach": "Trainer",
+    "form.selectType": "Trainingstyp wählen",
+    "form.selectCoach": "Trainer wählen",
     "form.date": "Datum",
     "form.time": "Uhrzeit",
-    "form.durationPh": "Dauer (Min)",
-    "form.participantsPh": "Teilnehmer",
-    "form.withWhomPh": "Trainer / Mit wem",
-    "form.notesPh": "Notizen",
-    "form.addBtn": "➕ Hinzufügen",
-    "export.excel": "📊 Excel exportieren",
-    "export.pdf": "📄 PDF exportieren",
-    "export.title": "Export:",
+    "form.startTime": "Startzeit",
+    "form.duration": "Dauer (Minuten)",
+    "form.durationExample": "Z. B. 60",
+    "form.participants": "Teilnehmerzahl",
+    "form.participantsExample": "Z. B. 10",
+    "form.people": "Personen / zusätzliche Details",
+    "form.peopleExample": "Z. B. Gruppe, Assistenten, kurze Notizen",
+    "form.notes": "Notizen",
+    "form.notesPlaceholder": "Notizen...",
+    "form.save": "Speichern",
+    "profile.stats": "Statistiken",
+    "profile.changeAvatar": "Avatar ändern",
+    "profile.updateAvatar": "Avatar aktualisieren",
+    "profile.color": "Profilfarbe",
+    "profile.colorSwatch": "Farbe {color}",
+    "profile.selectImage": "Wähle eine Bilddatei.",
+    "profile.imageTooLarge": "Bild zu groß (max. ~1,5 MB).",
+    "profile.avatarUploadFailed": "Avatar-Upload fehlgeschlagen. Prüfe den Bucket \"avatars\" und die Storage-Richtlinien (403/404). Details in der Konsole.",
+    "actions.add": "Hinzufügen",
+    "actions.addWithIcon": "➕ Hinzufügen",
+    "actions.saveWithIcon": "💾 Speichern",
+    "actions.editWithIcon": "✏️ Bearbeiten",
+    "actions.deleteWithIcon": "🗑 Löschen",
+    "export.section": "Export",
+    "export.excel": "Excel exportieren",
+    "export.pdf": "PDF exportieren",
+    "export.options": "Exportoptionen",
     "export.month": "Monat",
-    "export.monthLabel": "Monat:",
-    "export.custom": "Benutzerdefinierter Zeitraum",
-    "export.from": "Von:",
-    "export.to": "Bis:",
+    "export.custom": "Datumsbereich",
+    "export.selectMonth": "Monat wählen",
     "export.apply": "Anwenden",
-    "weekday.mon": "M",
-    "weekday.tue": "D",
-    "weekday.wed": "M",
-    "weekday.thu": "D",
-    "weekday.fri": "F",
-    "weekday.sat": "S",
-    "weekday.sun": "S",
-    "alerts.workoutUpdated": "Training aktualisiert ✅"
+    "export.selectFromTo": "Wähle 'Von' und 'Bis'.",
+    "export.invalidRange": "Das 'Von'-Datum darf nicht nach 'Bis' liegen.",
+    "export.applyError": "Fehler beim Anwenden des Exportzeitraums",
+    "export.xlsxMissing": "XLSX-Bibliothek nicht geladen.",
+    "export.noData": "Keine Daten zum Exportieren",
+    "export.excelError": "Excel-Exportfehler",
+    "export.pdfError": "PDF-Exportfehler",
+    "weekday.mon": "Mo",
+    "weekday.tue": "Di",
+    "weekday.wed": "Mi",
+    "weekday.thu": "Do",
+    "weekday.fri": "Fr",
+    "weekday.sat": "Sa",
+    "weekday.sun": "So",
+    "common.athlete": "Athletin",
+    "common.user": "Benutzer",
+    "common.admin": "Admin",
+    "common.unnamed": "(ohne Namen)",
+    "alerts.invalidSession": "Ungültige Sitzung. Bitte erneut anmelden.",
+    "alerts.fillRequired": "Fülle mindestens Datum, Uhrzeit und Typ aus.",
+    "alerts.selectSpecificUser": "Als Admin wähle zuerst einen bestimmten Benutzer (nicht 'Alle') im Menü Anzeigen.",
+    "alerts.workoutUpdated": "Training aktualisiert ✅",
+    "alerts.confirmDeleteWorkout": "Möchtest du dieses Training löschen?",
+    "alerts.editMode": "Bearbeitungsmodus: Felder ändern und dann SPEICHERN drücken ✅",
+    "alerts.supabaseSaveFailed": "Wert konnte nicht in Supabase gespeichert werden.",
+    "alerts.supabaseDeleteFailed": "Wert konnte nicht aus Supabase entfernt werden.",
+    "admin.athleteColorSwatch": "Athletinnenfarbe {color}",
+    "list.prevDay": "Vorheriger Tag",
+    "list.nextDay": "Nächster Tag",
+    "profile.avatarAlt": "Avatar",
+    "calendar.legendAria": "Legende der Kalenderfarben",
+    "export.colDate": "Datum",
+    "export.colTime": "Uhrzeit",
+    "export.colType": "Typ",
+    "export.colDuration": "Dauer",
+    "export.colDurationMin": "Dauer_min",
+    "export.colParticipants": "Teilnehmende",
+    "export.colCoach": "Trainer",
+    "export.colCreatedBy": "Erfasst_von",
+    "export.colCreatedBySpaced": "Erfasst von",
+    "export.sheetDay": "Tag",
+    "export.sheetPeriod": "Zeitraum",
+    "export.reportTitle": "Trainingsbericht",
+    "export.periodLabel": "Zeitraum",
+    "common.minutes": "Min",
+    "common.minutesShort": "m",
+    "dash.customRangeLower": "benutzerdefiniert",
   },
   sk: {
     "app.title": "Tréningy",
@@ -1628,54 +1907,148 @@ const I18N = {
     "auth.loginBtn": "Prihlásiť sa",
     "auth.registerBtn": "Registrovať sa",
     "auth.logoutBtn": "Odhlásiť sa",
-    "admin.viewAs": "Zobraziť:",
+    "auth.registered": "Registrácia dokončená!",
+    "auth.whoamiAdmin": "👑 {name} (admin)",
+    "auth.whoamiUser": "👤 {name}",
+    "admin.title": "Admin",
+    "admin.description": "Spravuj trénerov a typy tréningov dostupné v rozbaľovacích ponukách.",
+    "admin.activeAthlete": "Aktívna atlétka",
     "admin.all": "Všetci",
+    "admin.allFemale": "Všetky",
+    "admin.allAthletes": "Všetky atlétky",
+    "admin.mySessions": "Moje tréningy",
+    "admin.coaches": "Tréneri",
+    "admin.trainingTypes": "Typy tréningu",
+    "admin.newCoach": "Nový tréner",
+    "admin.newTrainingType": "Nový typ tréningu",
+    "admin.athleteColor": "Farba atlétky",
+    "admin.saveColor": "Uložiť farbu",
+    "admin.selectAthlete": "Vyber atlétku",
+    "admin.selectAthleteAndColor": "Vyber atlétku a platnú farbu.",
+    "admin.athleteColorHelp": "Ako admin môžeš vybrať a uložiť farbu kalendára pre každú atlétku.",
+    "nav.home": "Domov",
     "nav.dashboard": "Prehľad",
     "nav.calendar": "Kalendár",
     "nav.list": "Zoznam",
-    "dash.sessionsMonth": "Tréningy tento mesiac",
-    "dash.totalHours": "Celkové hodiny",
-    "dash.avgParticipants": "Priemer účastníkov",
+    "nav.profile": "Profil",
+    "stats.sessions": "Tréningy",
+    "stats.totalHours": "Celkové hodiny",
+    "stats.avgParticipants": "Priemer účastníkov",
+    "stats.hours": "Hodiny",
+    "stats.average": "Priemer",
     "dash.period": "Obdobie",
+    "dash.thisMonth": "Tento mesiac",
+    "dash.lastMonth": "Minulý mesiac",
+    "dash.thisYear": "Tento rok",
+    "dash.all": "Všetko",
+    "dash.customRange": "Vlastný rozsah",
     "dash.goCalendar": "Do kalendára",
     "dash.goList": "Do zoznamu",
-    "cal.hint": "Ťukni na deň pre zobrazenie tréningov.",
-    "people.sophie": "Sophie",
-    "people.vivienne": "Vivienne",
-    "people.both": "Obe",
-    "list.newWorkout": "Nový tréning",
+    "compare.title": "Porovnanie atlétok",
+    "compare.athlete1": "Atlétka 1",
+    "compare.athlete2": "Atlétka 2",
+    "compare.error": "Chyba porovnania.",
+    "calendar.legend": "Farba dňa sa riadi profilovou farbou atlétky",
+    "list.selectDay": "Vyber deň v kalendári na zobrazenie zoznamu.",
     "list.workouts": "Tréningy",
     "list.workoutsOf": "Tréningy dňa {date}",
-    "form.typePh": "Typ tréningu",
+    "list.titleWithDate": "Zoznam - {date}",
+    "list.noWorkouts": "Žiadne tréningy",
+    "list.loadError": "Chyba načítania",
+    "list.details": "Detaily",
+    "form.addWorkout": "Pridať tréning",
+    "form.editWorkout": "Upraviť tréning",
+    "form.type": "Typ tréningu",
+    "form.coach": "Tréner",
+    "form.selectType": "Vyber typ tréningu",
+    "form.selectCoach": "Vyber trénera",
     "form.date": "Dátum",
     "form.time": "Čas",
-    "form.durationPh": "Trvanie (min)",
-    "form.participantsPh": "Účastníci",
-    "form.withWhomPh": "Tréner / S kým",
-    "form.notesPh": "Poznámky",
-    "form.addBtn": "➕ Pridať",
-    "export.excel": "📊 Exportovať Excel",
-    "export.pdf": "📄 Exportovať PDF",
-    "export.title": "Export:",
+    "form.startTime": "Začiatok",
+    "form.duration": "Trvanie (minúty)",
+    "form.durationExample": "Napr. 60",
+    "form.participants": "Počet účastníkov",
+    "form.participantsExample": "Napr. 10",
+    "form.people": "Osoby / ďalšie detaily",
+    "form.peopleExample": "Napr. skupina, asistenti, krátke poznámky",
+    "form.notes": "Poznámky",
+    "form.notesPlaceholder": "Poznámky...",
+    "form.save": "Uložiť",
+    "profile.stats": "Štatistiky",
+    "profile.changeAvatar": "Zmeniť avatar",
+    "profile.updateAvatar": "Aktualizovať avatar",
+    "profile.color": "Farba profilu",
+    "profile.colorSwatch": "Farba {color}",
+    "profile.selectImage": "Vyber obrázkový súbor.",
+    "profile.imageTooLarge": "Obrázok je príliš veľký (max ~1.5 MB).",
+    "profile.avatarUploadFailed": "Nahratie avatara zlyhalo. Skontroluj bucket \"avatars\" a pravidlá Storage (403/404). Detaily sú v konzole.",
+    "actions.add": "Pridať",
+    "actions.addWithIcon": "➕ Pridať",
+    "actions.saveWithIcon": "💾 Uložiť",
+    "actions.editWithIcon": "✏️ Upraviť",
+    "actions.deleteWithIcon": "🗑 Odstrániť",
+    "export.section": "Export",
+    "export.excel": "Exportovať Excel",
+    "export.pdf": "Exportovať PDF",
+    "export.options": "Možnosti exportu",
     "export.month": "Mesiac",
-    "export.monthLabel": "Mesiac:",
-    "export.custom": "Vlastné obdobie",
-    "export.from": "Od:",
-    "export.to": "Do:",
+    "export.custom": "Rozsah dátumov",
+    "export.selectMonth": "Vyber mesiac",
     "export.apply": "Použiť",
-    "weekday.mon": "P",
-    "weekday.tue": "U",
-    "weekday.wed": "S",
-    "weekday.thu": "Š",
-    "weekday.fri": "P",
-    "weekday.sat": "S",
-    "weekday.sun": "N",
-    "alerts.workoutUpdated": "Tréning aktualizovaný ✅"
+    "export.selectFromTo": "Vyber 'Od' a 'Do'.",
+    "export.invalidRange": "Dátum 'Od' nemôže byť po dátume 'Do'.",
+    "export.applyError": "Chyba pri použití rozsahu exportu",
+    "export.xlsxMissing": "Knižnica XLSX nie je načítaná.",
+    "export.noData": "Žiadne údaje na export",
+    "export.excelError": "Chyba exportu Excel",
+    "export.pdfError": "Chyba exportu PDF",
+    "weekday.mon": "Po",
+    "weekday.tue": "Ut",
+    "weekday.wed": "St",
+    "weekday.thu": "Št",
+    "weekday.fri": "Pi",
+    "weekday.sat": "So",
+    "weekday.sun": "Ne",
+    "common.athlete": "Atlétka",
+    "common.user": "Používateľ",
+    "common.admin": "Admin",
+    "common.unnamed": "(bez mena)",
+    "alerts.invalidSession": "Neplatná relácia. Prihlás sa znova.",
+    "alerts.fillRequired": "Vyplň aspoň dátum, čas a typ.",
+    "alerts.selectSpecificUser": "Ako admin najprv vyber konkrétneho používateľa (nie 'Všetci') v menu zobrazenia.",
+    "alerts.workoutUpdated": "Tréning aktualizovaný ✅",
+    "alerts.confirmDeleteWorkout": "Chceš odstrániť tento tréning?",
+    "alerts.editMode": "Režim úprav: zmeň polia a potom stlač ULOŽIŤ ✅",
+    "alerts.supabaseSaveFailed": "Hodnotu sa nepodarilo uložiť do Supabase.",
+    "alerts.supabaseDeleteFailed": "Hodnotu sa nepodarilo odstrániť zo Supabase.",
+    "admin.athleteColorSwatch": "Farba atlétky {color}",
+    "list.prevDay": "Predchádzajúci deň",
+    "list.nextDay": "Nasledujúci deň",
+    "profile.avatarAlt": "Avatar",
+    "calendar.legendAria": "Legenda farieb kalendára",
+    "export.colDate": "Dátum",
+    "export.colTime": "Čas",
+    "export.colType": "Typ",
+    "export.colDuration": "Trvanie",
+    "export.colDurationMin": "Trvanie_min",
+    "export.colParticipants": "Účastníci",
+    "export.colCoach": "Tréner",
+    "export.colCreatedBy": "Vytvoril",
+    "export.colCreatedBySpaced": "Vytvoril",
+    "export.sheetDay": "Deň",
+    "export.sheetPeriod": "Obdobie",
+    "export.reportTitle": "Report tréningov",
+    "export.periodLabel": "Obdobie",
+    "common.minutes": "min",
+    "common.minutesShort": "m",
+    "dash.customRangeLower": "vlastné",
   }
 };
 
 function detectLanguage() {
-  const langs = navigator.languages || [navigator.language];
+  const saved = localStorage.getItem("app_lang");
+  if (saved && SUPPORTED_LANGS.includes(saved)) return saved;
+  const langs = navigator.languages?.length ? navigator.languages : [navigator.language];
   for (let l of langs) {
     l = (l || "").toLowerCase();
     const base = l.split("-")[0];
@@ -1708,19 +2081,27 @@ function applyTranslations() {
     if (key) el.setAttribute("placeholder", tr(key));
   });
 
+  // aria-label
+  document.querySelectorAll("[data-i18n-aria-label]").forEach(el => {
+    const key = el.getAttribute("data-i18n-aria-label");
+    if (key) el.setAttribute("aria-label", tr(key));
+  });
+
+  // alt
+  document.querySelectorAll("[data-i18n-alt]").forEach(el => {
+    const key = el.getAttribute("data-i18n-alt");
+    if (key) el.setAttribute("alt", tr(key));
+  });
+
   // document title
   const titleEl = document.querySelector("title[data-i18n]");
   if (titleEl) document.title = tr(titleEl.getAttribute("data-i18n"));
 }
 
-// translate known alerts without rewriting the whole file
-const __nativeAlert = window.alert.bind(window);
-window.alert = (msg) => {
-  if (msg === "Allenamento aggiornato ✅") return __nativeAlert(tr("alerts.workoutUpdated"));
-  return __nativeAlert(msg);
-};
-
-document.addEventListener("DOMContentLoaded", applyTranslations);
+document.addEventListener("DOMContentLoaded", () => {
+  applyTranslations();
+  document.documentElement.setAttribute("data-lang", currentLang);
+});
 
 
 
@@ -1729,17 +2110,17 @@ async function renderProfile(){
   const nameEl = document.getElementById("profileName");
   const emailEl = document.getElementById("profileEmail");
   const roleEl = document.getElementById("profileRole");
-  if (nameEl) nameEl.textContent = currentUser?.user_metadata?.full_name || currentUser?.email || "Utente";
+  if (nameEl) nameEl.textContent = currentUser?.user_metadata?.full_name || currentUser?.email || tr("common.user");
   if (emailEl) emailEl.textContent = currentUser?.email || "—";
 
   try {
     const isAdmin = await getIsAdmin();
-    if (roleEl) roleEl.textContent = isAdmin ? "Admin" : "Utente";
+    if (roleEl) roleEl.textContent = isAdmin ? tr("common.admin") : tr("common.user");
     const adminPanel = document.getElementById("adminPanel");
     if (adminPanel) adminPanel.style.display = isAdmin ? "block" : "none";
     if (isAdmin) { await loadSharedCatalogs(); refreshAdminLists(); refreshFormOptions(); await mountAdminAthleteColorManager(); }
   } catch(_) {
-    if (roleEl) roleEl.textContent = "Utente";
+    if (roleEl) roleEl.textContent = tr("common.user");
   }
 
   // Stats: mirror dashboard
