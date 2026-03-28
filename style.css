@@ -258,9 +258,11 @@ h3{ margin: 14px 0 10px; }
   left: 10px;
   right: 10px;
   bottom: calc(10px + env(safe-area-inset-bottom));
-  background: rgba(255,255,255,.98);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 18px;
   box-shadow: 0 8px 20px rgba(0,0,0,0.08);
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -272,7 +274,7 @@ h3{ margin: 14px 0 10px; }
   border: none;
   padding: 12px 6px;
   min-height: 56px;
-  border-radius: 12px;
+  border-radius: 14px;
   display:flex;
   flex-direction:column;
   align-items:center;
@@ -286,10 +288,11 @@ h3{ margin: 14px 0 10px; }
   color: var(--muted);
 }
 .nav-item.active{
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  background: var(--primary);
+  box-shadow: 0 4px 12px rgba(37,99,235,0.22);
 }
 .nav-item.active span{
-  color: var(--text);
+  color: #ffffff;
 }
 
 /* ================= DESKTOP ================= */
